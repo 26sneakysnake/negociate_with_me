@@ -22,15 +22,16 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = "negotiation_tactics"
     VECTOR_SIZE: int = 1024
 
-    @field_validator('MISTRAL_API_KEY', 'QDRANT_API_KEY', 'ELEVENLABS_API_KEY')
+    @field_validator('MISTRAL_API_KEY', 'QDRANT_API_KEY', 'ELEVENLABS_API_KEY', mode='before')
     @classmethod
     def validate_api_keys(cls, v: str, info) -> str:
+        # Allow app to start even with placeholder keys - services will just be unavailable
         if not v or 'your_' in v.lower() or '_here' in v.lower():
-            raise ValueError(
-                f"\n\n❌ {info.field_name} is not configured!\n"
-                f"Please edit the .env file and add your real API key.\n"
-                f"Current value: {v}\n"
+            print(
+                f"\n⚠️ WARNING: {info.field_name} is not configured!\n"
+                f"   The service will be unavailable. Edit .env to add a real API key.\n"
             )
+            return v  # Return the value anyway to allow startup
         return v
 
     class Config:

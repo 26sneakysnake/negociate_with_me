@@ -32,10 +32,31 @@ app.add_middleware(
 os.makedirs("audio_files", exist_ok=True)
 app.mount("/audio", StaticFiles(directory="audio_files"), name="audio")
 
-# Services
-mistral = MistralService()
-qdrant = QdrantService()
-elevenlabs = ElevenLabsService()
+# Services - Initialize lazily to allow app to start even with missing API keys
+mistral = None
+qdrant = None
+elevenlabs = None
+
+def init_services():
+    """Initialize services with error handling"""
+    global mistral, qdrant, elevenlabs
+    try:
+        mistral = MistralService()
+        print("✅ Mistral service initialized")
+    except Exception as e:
+        print(f"⚠️ Mistral service failed to initialize: {e}")
+
+    try:
+        qdrant = QdrantService()
+        print("✅ Qdrant service initialized")
+    except Exception as e:
+        print(f"⚠️ Qdrant service failed to initialize: {e}")
+
+    try:
+        elevenlabs = ElevenLabsService()
+        print("✅ ElevenLabs service initialized")
+    except Exception as e:
+        print(f"⚠️ ElevenLabs service failed to initialize: {e}")
 
 # In-memory session storage (use Redis in production)
 sessions: Dict[str, Session] = {}
@@ -43,14 +64,28 @@ sessions: Dict[str, Session] = {}
 # Startup
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and load tactics"""
-    await qdrant.initialize_collection()
-    # Load tactics if collection is empty
-    try:
-        count = await qdrant.load_tactics_database("data/negotiation_tactics.json")
-        print(f"✅ Loaded {count} negotiation tactics into Qdrant")
-    except Exception as e:
-        print(f"⚠️ Could not load tactics: {e}")
+    """Initialize services and database"""
+    print("\n" + "="*70)
+    print("🚀 Starting NegotiAI v0 Backend")
+    print("="*70)
+
+    # Initialize services
+    init_services()
+
+    # Try to initialize Qdrant collection and load tactics
+    if qdrant is not None:
+        try:
+            await qdrant.initialize_collection()
+            count = await qdrant.load_tactics_database("data/negotiation_tactics.json")
+            print(f"✅ Loaded {count} negotiation tactics into Qdrant")
+        except Exception as e:
+            print(f"⚠️ Could not load tactics: {e}")
+    else:
+        print("⚠️ Qdrant not available - tactics will not be loaded")
+
+    print("="*70)
+    print("✅ Backend is ready!")
+    print("="*70 + "\n")
 
 @app.get("/")
 async def root():
@@ -78,17 +113,28 @@ async def upload_context(file: UploadFile = File(...)):
 @app.post("/api/generate-strategy", response_model=Strategy)
 async def generate_strategy(context: NegotiationContext):
     """Generate negotiation strategy from context"""
-    try:
-        # Embed the context to find relevant tactics
-        context_embedding = mistral.embed_text(
-            f"{context.objective} {context.context_text[:500]}"
+    # Check if required services are available
+    if mistral is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Mistral AI service not available. Please check API key configuration."
         )
 
-        # Search for relevant tactics
-        relevant_tactics = await qdrant.search_relevant_tactics(
-            context_embedding,
-            limit=10
-        )
+    try:
+        # Embed the context to find relevant tactics
+        relevant_tactics = []
+        if qdrant is not None:
+            try:
+                context_embedding = mistral.embed_text(
+                    f"{context.objective} {context.context_text[:500]}"
+                )
+                relevant_tactics = await qdrant.search_relevant_tactics(
+                    context_embedding,
+                    limit=10
+                )
+            except Exception as e:
+                print(f"⚠️ Could not retrieve tactics from Qdrant: {e}")
+                # Continue without tactics
 
         # Generate strategy
         strategy = await mistral.generate_strategy(
@@ -115,6 +161,13 @@ async def generate_strategy(context: NegotiationContext):
 @app.post("/api/analyze-negotiation", response_model=Analysis)
 async def analyze_negotiation(analysis_input: TranscriptAnalysis):
     """Analyze negotiation transcript"""
+    # Check if required services are available
+    if mistral is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Mistral AI service not available. Please check API key configuration."
+        )
+
     try:
         # Get session
         session = sessions.get(analysis_input.session_id)
@@ -122,11 +175,17 @@ async def analyze_negotiation(analysis_input: TranscriptAnalysis):
             raise HTTPException(status_code=404, detail="Session or strategy not found")
 
         # Embed transcript to find relevant tactics
-        transcript_embedding = mistral.embed_text(analysis_input.transcript[:1000])
-        relevant_tactics = await qdrant.search_relevant_tactics(
-            transcript_embedding,
-            limit=15
-        )
+        relevant_tactics = []
+        if qdrant is not None:
+            try:
+                transcript_embedding = mistral.embed_text(analysis_input.transcript[:1000])
+                relevant_tactics = await qdrant.search_relevant_tactics(
+                    transcript_embedding,
+                    limit=15
+                )
+            except Exception as e:
+                print(f"⚠️ Could not retrieve tactics from Qdrant: {e}")
+                # Continue without tactics
 
         # Analyze performance
         analysis = await mistral.analyze_negotiation(
@@ -136,13 +195,18 @@ async def analyze_negotiation(analysis_input: TranscriptAnalysis):
             tactics_context=relevant_tactics
         )
 
-        # Generate audio feedback
-        feedback_text = elevenlabs.format_analysis_for_speech(analysis)
-        audio_file = await elevenlabs.generate_feedback_audio(
-            feedback_text,
-            f"{analysis_input.session_id}.mp3"
-        )
-        analysis.audio_url = f"/audio/{analysis_input.session_id}.mp3"
+        # Generate audio feedback (optional)
+        if elevenlabs is not None:
+            try:
+                feedback_text = elevenlabs.format_analysis_for_speech(analysis)
+                audio_file = await elevenlabs.generate_feedback_audio(
+                    feedback_text,
+                    f"{analysis_input.session_id}.mp3"
+                )
+                analysis.audio_url = f"/audio/{analysis_input.session_id}.mp3"
+            except Exception as e:
+                print(f"⚠️ Could not generate audio feedback: {e}")
+                # Continue without audio
 
         # Update session
         session.analysis = analysis
