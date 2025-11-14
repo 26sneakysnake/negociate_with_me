@@ -8,13 +8,10 @@ import os
 settings = get_settings()
 
 # Get DATABASE_URL from environment or settings
-# Use SQLite as fallback if PostgreSQL is not available
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./negotiai.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://negotiai:negotiai_dev@postgres:5432/negotiai")
 
 # Create engine
-# Add check_same_thread=False for SQLite compatibility
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL)
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
