@@ -1,5 +1,5 @@
 # backend/services/elevenlabs_service.py
-from elevenlabs import ElevenLabs
+from elevenlabs.client import ElevenLabs
 from backend.config import get_settings
 import os
 import uuid
@@ -27,10 +27,11 @@ class ElevenLabsService:
         Keep practicing these techniques, and you'll continue to improve!
         """
 
-        audio = self.client.generate(
+        # Generate audio using the new API
+        audio_generator = self.client.text_to_speech.convert(
             text=script,
-            voice=self.voice_id,
-            model="eleven_monolingual_v1"
+            voice_id=self.voice_id,
+            model_id="eleven_monolingual_v1"
         )
 
         # Save audio file
@@ -41,7 +42,7 @@ class ElevenLabsService:
         file_path = f"audio_files/{output_path}"
 
         with open(file_path, 'wb') as f:
-            for chunk in audio:
+            for chunk in audio_generator:
                 f.write(chunk)
 
         return file_path
