@@ -17,9 +17,14 @@ pdf_service = PDFService()
 class SessionListItem(BaseModel):
     id: str
     objective: str
+    context_text: str
+    actual_outcome: str | None
     counterparty_name: str | None
     created_at: datetime
     overall_score: float | None
+    preparation_score: float | None
+    tactics_score: float | None
+    outcome_score: float | None
     has_strategy: bool
     has_analysis: bool
     template_used: str | None
@@ -57,9 +62,14 @@ async def list_sessions(limit: int = 50, offset: int = 0, db: Session = Depends(
         SessionListItem(
             id=s.id,
             objective=s.objective,
+            context_text=s.context_text,
+            actual_outcome=s.actual_outcome,
             counterparty_name=s.counterparty_name,
             created_at=s.created_at,
             overall_score=s.overall_score,
+            preparation_score=s.preparation_score,
+            tactics_score=s.tactics_score,
+            outcome_score=s.outcome_score,
             has_strategy=s.strategy_json is not None,
             has_analysis=s.analysis_json is not None,
             template_used=s.template_used
