@@ -56,13 +56,13 @@ function HistoryPage({ onNewNegotiation }) {
 
   // Calculate average improvement
   const getAverageScore = () => {
-    if (!performanceData || performanceData.sessions.length === 0) return 0;
+    if (!performanceData || !performanceData.sessions || performanceData.sessions.length === 0) return 0;
     const total = performanceData.sessions.reduce((sum, s) => sum + s.score, 0);
     return Math.round(total / performanceData.sessions.length);
   };
 
   const getImprovement = () => {
-    if (!performanceData || performanceData.sessions.length < 2) return null;
+    if (!performanceData || !performanceData.sessions || performanceData.sessions.length < 2) return null;
     const sessions = performanceData.sessions;
     const firstScore = sessions[0].score;
     const lastScore = sessions[sessions.length - 1].score;
@@ -82,7 +82,7 @@ function HistoryPage({ onNewNegotiation }) {
       </div>
 
       {/* Performance Summary */}
-      {performanceData && performanceData.sessions.length > 0 && (
+      {performanceData && performanceData.sessions && performanceData.sessions.length > 0 && (
         <div className="performance-summary">
           <div className="stat-card">
             <h3>Total Negotiations</h3>
@@ -109,7 +109,7 @@ function HistoryPage({ onNewNegotiation }) {
       )}
 
       {/* Performance Chart */}
-      {performanceData && performanceData.sessions.length > 1 && (
+      {performanceData && performanceData.sessions && performanceData.sessions.length > 1 && (
         <div className="performance-chart-container">
           <h3>📈 Performance Over Time</h3>
           <div className="simple-chart">
