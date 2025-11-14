@@ -99,33 +99,75 @@ AI generates:
 - Key recommendations
 - Audio feedback summary
 
+## ✨ V1 Features (NEW!)
+
+### 📦 Session Persistence
+- All negotiations automatically saved to PostgreSQL database
+- Complete session history with context, strategy, and analysis
+- Retrieve past negotiations anytime
+
+### 📄 PDF Export
+- Download professional PDF reports for:
+  - Negotiation strategy (pre-negotiation brief)
+  - Performance analysis (post-negotiation report)
+- Formatted with colors, charts, and detailed breakdowns
+
+### 📊 Performance Tracking
+- View all past negotiations in History page
+- Interactive charts showing score progression over time
+- Statistics: total negotiations, average score, improvement tracking
+- Compare performance across multiple sessions
+- See message: "You've improved by +15 points!"
+
+### 📝 Context Templates
+5 pre-configured templates for quick start:
+- **SaaS Enterprise License** - Software contract negotiations
+- **Real Estate Purchase** - Property buying negotiations (French/English)
+- **Salary Negotiation** - Job offer and raise discussions
+- **Freelance Contract** - Consulting and freelance agreements
+- **Vendor/Supplier Contract** - B2B procurement negotiations
+
+Each template includes:
+- Pre-filled context structure
+- Objective templates
+- Minimum acceptable outcome templates
+
 ## 🗂️ Project Structure
 
 ```
 negotiai-v0/
 ├── backend/
-│   ├── main.py                 # FastAPI app + routes
-│   ├── config.py               # Configuration
-│   ├── models.py               # Pydantic models
+│   ├── main.py                    # FastAPI app + routes
+│   ├── config.py                  # Configuration
+│   ├── models.py                  # Pydantic models
+│   ├── database.py                # SQLAlchemy setup (V1)
+│   ├── db_models.py               # Database models (V1)
+│   ├── crud.py                    # Database operations (V1)
+│   ├── init_db.py                 # DB initialization + templates (V1)
 │   ├── services/
-│   │   ├── mistral_service.py  # AI strategy & analysis
-│   │   ├── qdrant_service.py   # Vector search for tactics
-│   │   └── elevenlabs_service.py # Voice generation
+│   │   ├── mistral_service.py     # AI strategy & analysis
+│   │   ├── qdrant_service.py      # Vector search for tactics
+│   │   ├── elevenlabs_service.py  # Voice generation
+│   │   └── pdf_service.py         # PDF export generation (V1)
+│   ├── routers/
+│   │   ├── sessions.py            # Session management API (V1)
+│   │   └── templates.py           # Template management API (V1)
 │   ├── data/
 │   │   └── negotiation_tactics.json # 15 tactics database
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx             # Main component
+│   │   ├── App.jsx                # Main component
 │   │   ├── pages/
-│   │   │   ├── PrepPage.jsx    # Context upload
-│   │   │   ├── StrategyPage.jsx # Strategy display
-│   │   │   └── AnalysisPage.jsx # Performance analysis
+│   │   │   ├── PrepPage.jsx       # Context upload + templates
+│   │   │   ├── StrategyPage.jsx   # Strategy display + PDF export
+│   │   │   ├── AnalysisPage.jsx   # Performance analysis + PDF
+│   │   │   └── HistoryPage.jsx    # Session history + charts (V1)
 │   │   ├── services/
-│   │   │   └── api.js          # Backend API calls
-│   │   └── App.css             # All styles
+│   │   │   └── api.js             # Backend API calls
+│   │   └── App.css                # All styles
 │   └── package.json
-├── docker-compose.yml
+├── docker-compose.yml             # Includes PostgreSQL (V1)
 └── README.md
 ```
 
@@ -149,6 +191,10 @@ A sample negotiation scenario is included for testing:
 - Qdrant (Vector database for tactics)
 - ElevenLabs (Text-to-speech)
 - PyPDF2 (PDF parsing)
+- PostgreSQL (Session persistence - V1)
+- SQLAlchemy (ORM - V1)
+- Reportlab (PDF generation - V1)
+- Matplotlib (Charts for PDFs - V1)
 
 **Frontend:**
 - React 18
@@ -157,6 +203,7 @@ A sample negotiation scenario is included for testing:
 
 **Infrastructure:**
 - Docker & Docker Compose
+- PostgreSQL 15
 - Python 3.11
 - Node.js 18
 
@@ -181,12 +228,33 @@ A sample negotiation scenario is included for testing:
 
 ## 📊 API Endpoints
 
+**Core Negotiation Flow:**
 ```
-POST /api/upload-context
-POST /api/generate-strategy
-POST /api/analyze-negotiation
-GET  /api/session/{session_id}
-GET  /audio/{filename}
+POST /api/upload-context              # Upload PDF/text context
+POST /api/generate-strategy           # Generate negotiation strategy
+POST /api/analyze-negotiation         # Analyze performance
+GET  /api/session/{session_id}        # Get session data
+```
+
+**V1 - Session Management:**
+```
+GET  /api/sessions/                   # List all sessions
+GET  /api/sessions/{id}               # Get session details
+GET  /api/sessions/performance/history # Performance comparison data
+GET  /api/sessions/{id}/export/strategy  # Download strategy PDF
+GET  /api/sessions/{id}/export/analysis  # Download analysis PDF
+```
+
+**V1 - Templates:**
+```
+GET  /api/templates/                  # List all context templates
+GET  /api/templates/{id}              # Get specific template
+```
+
+**Assets:**
+```
+GET  /audio/{filename}                # Audio feedback files
+GET  /exports/{filename}              # PDF export files
 ```
 
 ## 🧪 Testing
@@ -209,14 +277,22 @@ ELEVENLABS_API_KEY=    # ElevenLabs API key
 
 ## 🚧 Roadmap
 
-Future enhancements:
-- [ ] Session persistence (Redis/PostgreSQL)
-- [ ] User authentication
-- [ ] Multiple negotiation sessions per user
-- [ ] Export reports to PDF
-- [ ] Live negotiation mode with real-time suggestions
-- [ ] Multi-language support
-- [ ] Mobile app
+**V1 - Completed ✅**
+- [x] Session persistence (PostgreSQL)
+- [x] Multiple negotiation sessions with history
+- [x] Export reports to PDF (strategy + analysis)
+- [x] Performance tracking and comparison
+- [x] Context templates for common scenarios
+
+**Future Enhancements:**
+- [ ] User authentication & multi-user support
+- [ ] Live negotiation mode with real-time AI suggestions
+- [ ] Advanced analytics dashboard with trends
+- [ ] Team collaboration features
+- [ ] Custom tactic database creation
+- [ ] Multi-language support (FR, EN, ES, DE)
+- [ ] Mobile app (React Native)
+- [ ] Integration with calendar/CRM tools
 
 ## 📄 License
 
