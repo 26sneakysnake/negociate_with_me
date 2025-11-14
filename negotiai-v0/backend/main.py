@@ -1,7 +1,8 @@
 # backend/main.py
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session as DBSession
 from config import get_settings
 from models import (
     NegotiationContext, Strategy, TranscriptAnalysis, Analysis, Session
@@ -9,7 +10,10 @@ from models import (
 from services.mistral_service import MistralService
 from services.qdrant_service import QdrantService
 from services.elevenlabs_service import ElevenLabsService
-from typing import Dict
+from database import get_db, Base, engine
+import crud
+from routers import sessions, templates
+from typing import Dict, Optional
 import PyPDF2
 import io
 import json
@@ -28,9 +32,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files for audio
+# Mount static files for audio and exports
 os.makedirs("audio_files", exist_ok=True)
+os.makedirs("exports", exist_ok=True)
 app.mount("/audio", StaticFiles(directory="audio_files"), name="audio")
+app.mount("/exports", StaticFiles(directory="exports"), name="exports")
 
 # Services - Initialize lazily to allow app to start even with missing API keys
 mistral = None
@@ -61,6 +67,10 @@ def init_services():
 # In-memory session storage (use Redis in production)
 sessions: Dict[str, Session] = {}
 
+# Include routers
+app.include_router(sessions.router)
+app.include_router(templates.router)
+
 # Startup
 @app.on_event("startup")
 async def startup_event():
@@ -68,6 +78,18 @@ async def startup_event():
     print("\n" + "="*70)
     print("🚀 Starting NegotiAI v0 Backend")
     print("="*70)
+
+    # Initialize database
+    print("📦 Initializing database...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database tables created")
+
+        # Load context templates
+        from init_db import load_templates
+        load_templates()
+    except Exception as e:
+        print(f"⚠️ Database initialization error: {e}")
 
     # Initialize services
     init_services()
@@ -111,7 +133,7 @@ async def upload_context(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
 
 @app.post("/api/generate-strategy", response_model=Strategy)
-async def generate_strategy(context: NegotiationContext):
+async def generate_strategy(context: NegotiationContext, db: DBSession = Depends(get_db)):
     """Generate negotiation strategy from context"""
     # Check if required services are available
     if mistral is None:
@@ -145,7 +167,7 @@ async def generate_strategy(context: NegotiationContext):
             tactics_context=relevant_tactics
         )
 
-        # Store session
+        # Store session in-memory (for backward compatibility)
         session = Session(
             id=strategy.session_id,
             context=context,
@@ -153,13 +175,30 @@ async def generate_strategy(context: NegotiationContext):
         )
         sessions[strategy.session_id] = session
 
+        # Persist to database
+        try:
+            crud.create_session(
+                db=db,
+                session_id=strategy.session_id,
+                context=context
+            )
+            crud.update_session_strategy(
+                db=db,
+                session_id=strategy.session_id,
+                strategy=strategy
+            )
+            print(f"✅ Session {strategy.session_id} saved to database")
+        except Exception as e:
+            print(f"⚠️ Could not save session to database: {e}")
+            # Continue anyway - in-memory session still works
+
         return strategy
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating strategy: {str(e)}")
 
 @app.post("/api/analyze-negotiation", response_model=Analysis)
-async def analyze_negotiation(analysis_input: TranscriptAnalysis):
+async def analyze_negotiation(analysis_input: TranscriptAnalysis, db: DBSession = Depends(get_db)):
     """Analyze negotiation transcript"""
     # Check if required services are available
     if mistral is None:
@@ -169,10 +208,20 @@ async def analyze_negotiation(analysis_input: TranscriptAnalysis):
         )
 
     try:
-        # Get session
+        # Get session from in-memory or database
         session = sessions.get(analysis_input.session_id)
         if not session or not session.strategy:
-            raise HTTPException(status_code=404, detail="Session or strategy not found")
+            # Try to load from database
+            db_session = crud.get_session(db, analysis_input.session_id)
+            if not db_session or not db_session.strategy_json:
+                raise HTTPException(status_code=404, detail="Session or strategy not found")
+            # Reconstruct session from database
+            session = Session(
+                id=db_session.id,
+                context=NegotiationContext(**db_session.context_json),
+                strategy=Strategy(**db_session.strategy_json)
+            )
+            sessions[analysis_input.session_id] = session
 
         # Embed transcript to find relevant tactics
         relevant_tactics = []
@@ -227,8 +276,22 @@ async def analyze_negotiation(analysis_input: TranscriptAnalysis):
                 print(f"⚠️ Could not generate audio feedback: {e}")
                 # Continue without audio
 
-        # Update session
+        # Update session in-memory
         session.analysis = analysis
+
+        # Persist to database
+        try:
+            crud.update_session_analysis(
+                db=db,
+                session_id=analysis_input.session_id,
+                analysis=analysis,
+                transcript=analysis_input.transcript,
+                actual_outcome=analysis_input.actual_outcome
+            )
+            print(f"✅ Analysis for session {analysis_input.session_id} saved to database")
+        except Exception as e:
+            print(f"⚠️ Could not save analysis to database: {e}")
+            # Continue anyway - in-memory session still works
 
         return analysis
 
