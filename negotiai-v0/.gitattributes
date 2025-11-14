@@ -1,0 +1,8 @@
+# Force Unix line endings for shell scripts
+*.sh text eol=lf
+
+# Force Unix line endings for Python files
+*.py text eol=lf
+
+# Force Unix line endings for Dockerfile
+Dockerfile text eol=lf
