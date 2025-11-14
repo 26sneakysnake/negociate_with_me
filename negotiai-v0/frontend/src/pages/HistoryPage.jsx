@@ -172,7 +172,7 @@ function HistoryPage({ onNewNegotiation }) {
                   <div className="session-details">
                     <div className="session-context">
                       <strong>Context:</strong>
-                      <p>{session.context_text.substring(0, 200)}...</p>
+                      <p>{session.context_text ? session.context_text.substring(0, 200) + '...' : 'No context available'}</p>
                     </div>
                     <div className="session-scores">
                       {session.preparation_score && (
