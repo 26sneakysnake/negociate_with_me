@@ -79,17 +79,18 @@ async def startup_event():
     print("🚀 Starting NegotiAI v0 Backend")
     print("="*70)
 
-    # Initialize database
-    print("📦 Initializing database...")
+    # Database should already be initialized by start.sh
+    # This is just a safety check
+    print("📦 Checking database connection...")
     try:
-        Base.metadata.create_all(bind=engine)
-        print("✅ Database tables created")
-
-        # Load context templates
-        from init_db import load_templates
-        load_templates()
+        from database import SessionLocal
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        db.close()
+        print("✅ Database connection OK")
     except Exception as e:
-        print(f"⚠️ Database initialization error: {e}")
+        print(f"⚠️ Database connection error: {e}")
+        print("   Backend will continue but database features may not work")
 
     # Initialize services
     init_services()

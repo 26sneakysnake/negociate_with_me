@@ -24,7 +24,7 @@ services:
       - ./backend:/app
       - ./audio_files:/app/audio_files
       - ./exports:/app/exports
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: bash start.sh
     depends_on:
       - postgres
 
