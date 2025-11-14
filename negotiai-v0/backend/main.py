@@ -181,8 +181,8 @@ async def generate_strategy(context: NegotiationContext, db: DBSession = Depends
         try:
             crud.create_session(
                 db=db,
-                session_id=strategy.session_id,
-                context=context
+                context=context,
+                session_id=strategy.session_id
             )
             crud.update_session_strategy(
                 db=db,
@@ -192,6 +192,7 @@ async def generate_strategy(context: NegotiationContext, db: DBSession = Depends
             print(f"✅ Session {strategy.session_id} saved to database")
         except Exception as e:
             print(f"⚠️ Could not save session to database: {e}")
+            print(f"   Error details: {type(e).__name__}: {e}")
             # Continue anyway - in-memory session still works
 
         return strategy
