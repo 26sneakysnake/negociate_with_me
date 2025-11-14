@@ -25,7 +25,7 @@ def update_session_strategy(db: Session, session_id: str, strategy: Strategy) ->
     """Update session with generated strategy"""
     db_session = db.query(NegotiationSessionDB).filter(NegotiationSessionDB.id == session_id).first()
     if db_session:
-        db_session.strategy_json = strategy.model_dump()  # Pydantic v2
+        db_session.strategy_json = strategy.model_dump(mode='json')  # Pydantic v2 with JSON serialization
         db.commit()
         db.refresh(db_session)
         print(f"✅ Strategy saved for session {session_id}")
@@ -37,7 +37,7 @@ def update_session_analysis(db: Session, session_id: str, analysis: Analysis, tr
     """Update session with analysis results"""
     db_session = db.query(NegotiationSessionDB).filter(NegotiationSessionDB.id == session_id).first()
     if db_session:
-        db_session.analysis_json = analysis.model_dump()  # Pydantic v2
+        db_session.analysis_json = analysis.model_dump(mode='json')  # Pydantic v2 with JSON serialization
         db_session.transcript = transcript
         db_session.actual_outcome = actual_outcome
         db_session.overall_score = analysis.performance.overall_score
