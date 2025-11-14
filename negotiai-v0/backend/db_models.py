@@ -22,6 +22,10 @@ class NegotiationSessionDB(Base):
     # Analysis (JSON)
     analysis_json = Column(JSON, nullable=True)
 
+    # Negotiation data
+    transcript = Column(Text, nullable=True)
+    actual_outcome = Column(Text, nullable=True)
+
     # Performance scores for quick queries
     overall_score = Column(Float, nullable=True)
     preparation_score = Column(Float, nullable=True)
