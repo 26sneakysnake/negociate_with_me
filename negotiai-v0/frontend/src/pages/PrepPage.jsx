@@ -1,6 +1,6 @@
 // frontend/src/pages/PrepPage.jsx
-import React, { useState } from 'react';
-import { uploadContext } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { uploadContext, getTemplates } from '../services/api';
 
 function PrepPage({ onReady }) {
   const [contextText, setContextText] = useState('');
@@ -8,6 +8,35 @@ function PrepPage({ onReady }) {
   const [minimum, setMinimum] = useState('');
   const [counterparty, setCounterparty] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+
+  // Load templates on mount
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        const data = await getTemplates();
+        setTemplates(data);
+      } catch (error) {
+        console.error('Failed to load templates:', error);
+      }
+    }
+    loadTemplates();
+  }, []);
+
+  const handleTemplateSelect = (e) => {
+    const templateId = e.target.value;
+    setSelectedTemplate(templateId);
+
+    if (templateId) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        setContextText(template.context_template);
+        setObjective(template.objective_template);
+        setMinimum(template.minimum_template);
+      }
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -44,6 +73,20 @@ function PrepPage({ onReady }) {
       <p className="subtitle">Upload your context and define your objectives</p>
 
       <div className="form-section">
+        {templates.length > 0 && (
+          <label>
+            <strong>💡 Quick Start - Use a Template</strong>
+            <select value={selectedTemplate} onChange={handleTemplateSelect}>
+              <option value="">-- Select a template (optional) --</option>
+              {templates.map(template => (
+                <option key={template.id} value={template.id}>
+                  {template.icon} {template.name} - {template.description}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label>
           <strong>1. Upload Context (PDF or Text)</strong>
           <input

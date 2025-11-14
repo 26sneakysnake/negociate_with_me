@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import PrepPage from './pages/PrepPage';
 import StrategyPage from './pages/StrategyPage';
 import AnalysisPage from './pages/AnalysisPage';
+import HistoryPage from './pages/HistoryPage';
 import './App.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('prep'); // prep, strategy, analysis
+  const [currentPage, setCurrentPage] = useState('prep'); // prep, strategy, analysis, history
   const [sessionData, setSessionData] = useState({
     context: null,
     strategy: null,
@@ -27,6 +28,15 @@ function App() {
     setCurrentPage('analysis');
   };
 
+  const handleNewNegotiation = () => {
+    setSessionData({
+      context: null,
+      strategy: null,
+      analysis: null
+    });
+    setCurrentPage('prep');
+  };
+
   return (
     <div className="App">
       <header className="app-header">
@@ -43,6 +53,13 @@ function App() {
         </div>
         <div className={`step ${currentPage === 'analysis' ? 'active' : ''}`}>
           3. Analysis
+        </div>
+        <div
+          className={`step ${currentPage === 'history' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('history')}
+          style={{ cursor: 'pointer' }}
+        >
+          📊 History
         </div>
       </nav>
 
@@ -66,6 +83,10 @@ function App() {
             onAnalysisComplete={handleAnalysisComplete}
             analysis={sessionData.analysis}
           />
+        )}
+
+        {currentPage === 'history' && (
+          <HistoryPage onNewNegotiation={handleNewNegotiation} />
         )}
       </main>
     </div>

@@ -451,3 +451,228 @@ textarea {
   color: #667eea;
   font-style: italic;
 }
+
+/* History Page */
+.history-page {
+  animation: fadeIn 0.5s;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.performance-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 25px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.stat-subtitle {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-top: 10px;
+}
+
+.performance-chart-container {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.performance-chart-container h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.simple-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 250px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  gap: 15px;
+}
+
+.chart-bar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 80px;
+}
+
+.chart-bar {
+  width: 100%;
+  background: #667eea;
+  border-radius: 5px 5px 0 0;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 5px;
+  min-height: 30px;
+}
+
+.chart-bar:hover {
+  opacity: 0.8;
+  transform: translateY(-5px);
+}
+
+.chart-label {
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.chart-date {
+  margin-top: 10px;
+  font-size: 0.7rem;
+  color: #666;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.sessions-list {
+  margin-top: 30px;
+}
+
+.sessions-list h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.empty-state p {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+.sessions-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.session-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.session-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.session-date {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.session-score {
+  padding: 5px 12px;
+  border-radius: 20px;
+  color: white;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.session-objective {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.session-outcome {
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.session-details {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #f0f0f0;
+  animation: fadeIn 0.3s;
+}
+
+.session-context {
+  margin-bottom: 15px;
+}
+
+.session-context strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.session-context p {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.session-scores {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mini-score {
+  background: #f0f0f0;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  color: #555;
+  font-weight: 600;
+}

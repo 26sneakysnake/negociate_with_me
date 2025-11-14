@@ -1,6 +1,6 @@
 // frontend/src/pages/AnalysisPage.jsx
 import React, { useState } from 'react';
-import { analyzeNegotiation } from '../services/api';
+import { analyzeNegotiation, downloadAnalysisPdf } from '../services/api';
 
 function AnalysisPage({ strategy, onAnalysisComplete, analysis }) {
   const [transcript, setTranscript] = useState('');
@@ -38,6 +38,14 @@ function AnalysisPage({ strategy, onAnalysisComplete, analysis }) {
       }
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadAnalysisPdf(strategy.session_id);
+    } catch (error) {
+      alert('Error downloading PDF: ' + error.message);
     }
   };
 
@@ -186,6 +194,9 @@ Me: Based on the value we provide, I think 55K is more appropriate
       </div>
 
       <div className="action-buttons">
+        <button className="secondary-button" onClick={handleDownloadPdf}>
+          📄 Download PDF Report
+        </button>
         <button
           className="secondary-button"
           onClick={() => window.location.reload()}

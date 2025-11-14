@@ -1,6 +1,6 @@
 // frontend/src/pages/StrategyPage.jsx
 import React, { useState, useEffect } from 'react';
-import { generateStrategy } from '../services/api';
+import { generateStrategy, downloadStrategyPdf } from '../services/api';
 
 function StrategyPage({ context, onStrategyGenerated, onAnalyze, strategy }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +23,14 @@ function StrategyPage({ context, onStrategyGenerated, onAnalyze, strategy }) {
       alert('Error generating strategy: ' + error.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadStrategyPdf(localStrategy.session_id);
+    } catch (error) {
+      alert('Error downloading PDF: ' + error.message);
     }
   };
 
@@ -99,6 +107,9 @@ function StrategyPage({ context, onStrategyGenerated, onAnalyze, strategy }) {
       <div className="action-buttons">
         <button className="secondary-button" onClick={loadStrategy}>
           🔄 Regenerate Strategy
+        </button>
+        <button className="secondary-button" onClick={handleDownloadPdf}>
+          📄 Download PDF
         </button>
         <button className="primary-button" onClick={onAnalyze}>
           Analyze My Negotiation →
