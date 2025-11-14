@@ -12,7 +12,8 @@ from services.qdrant_service import QdrantService
 from services.elevenlabs_service import ElevenLabsService
 from database import get_db, Base, engine
 import crud
-from routers import sessions, templates
+from routers.sessions import router as sessions_router
+from routers.templates import router as templates_router
 from typing import Dict, Optional
 import PyPDF2
 import io
@@ -68,8 +69,8 @@ def init_services():
 sessions: Dict[str, Session] = {}
 
 # Include routers
-app.include_router(sessions.router)
-app.include_router(templates.router)
+app.include_router(sessions_router)
+app.include_router(templates_router)
 
 # Startup
 @app.on_event("startup")
