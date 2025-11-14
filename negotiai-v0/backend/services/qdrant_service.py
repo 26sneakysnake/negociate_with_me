@@ -1,7 +1,7 @@
 # backend/services/qdrant_service.py
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from backend.config import get_settings
+from config import get_settings
 from typing import List, Dict
 import json
 import uuid
@@ -36,7 +36,7 @@ class QdrantService:
             tactics = json.load(f)
 
         # Import here to avoid circular dependency
-        from backend.services.mistral_service import MistralService
+        from services.mistral_service import MistralService
         mistral = MistralService()
 
         points = []

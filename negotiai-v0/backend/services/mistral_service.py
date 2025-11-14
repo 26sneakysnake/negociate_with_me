@@ -1,7 +1,7 @@
 # backend/services/mistral_service.py
 from mistralai import Mistral
-from backend.config import get_settings
-from backend.models import Strategy, Objection, Analysis, TacticDetection, PerformanceScore
+from config import get_settings
+from models import Strategy, Objection, Analysis, TacticDetection, PerformanceScore
 import json
 from typing import List
 import uuid

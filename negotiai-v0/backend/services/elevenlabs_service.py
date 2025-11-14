@@ -1,6 +1,6 @@
 # backend/services/elevenlabs_service.py
 from elevenlabs.client import ElevenLabs
-from backend.config import get_settings
+from config import get_settings
 import os
 import uuid
 

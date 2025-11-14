@@ -10,6 +10,7 @@ function StrategyPage({ context, onStrategyGenerated, onAnalyze, strategy }) {
     if (!localStrategy && context) {
       loadStrategy();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadStrategy = async () => {

@@ -2,13 +2,13 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.config import get_settings
-from backend.models import (
+from config import get_settings
+from models import (
     NegotiationContext, Strategy, TranscriptAnalysis, Analysis, Session
 )
-from backend.services.mistral_service import MistralService
-from backend.services.qdrant_service import QdrantService
-from backend.services.elevenlabs_service import ElevenLabsService
+from services.mistral_service import MistralService
+from services.qdrant_service import QdrantService
+from services.elevenlabs_service import ElevenLabsService
 from typing import Dict
 import PyPDF2
 import io
@@ -47,7 +47,7 @@ async def startup_event():
     await qdrant.initialize_collection()
     # Load tactics if collection is empty
     try:
-        count = await qdrant.load_tactics_database("backend/data/negotiation_tactics.json")
+        count = await qdrant.load_tactics_database("data/negotiation_tactics.json")
         print(f"✅ Loaded {count} negotiation tactics into Qdrant")
     except Exception as e:
         print(f"⚠️ Could not load tactics: {e}")
