@@ -178,22 +178,41 @@ async def analyze_negotiation(analysis_input: TranscriptAnalysis):
         relevant_tactics = []
         if qdrant is not None:
             try:
+                print("🔍 Attempting to retrieve relevant tactics...")
                 transcript_embedding = mistral.embed_text(analysis_input.transcript[:1000])
                 relevant_tactics = await qdrant.search_relevant_tactics(
                     transcript_embedding,
                     limit=15
                 )
+                print(f"✅ Retrieved {len(relevant_tactics)} tactics")
             except Exception as e:
-                print(f"⚠️ Could not retrieve tactics from Qdrant: {e}")
-                # Continue without tactics
+                error_msg = str(e)
+                print(f"⚠️ Could not retrieve tactics: {error_msg}")
+                # Check if it's a rate limit - inform user but continue
+                if "rate limit" in error_msg.lower() or "429" in error_msg:
+                    print("ℹ️ Continuing analysis without tactics (rate limit hit)")
+                # Continue without tactics - analysis can still work
 
         # Analyze performance
-        analysis = await mistral.analyze_negotiation(
-            strategy=session.strategy,
-            transcript=analysis_input.transcript,
-            actual_outcome=analysis_input.actual_outcome,
-            tactics_context=relevant_tactics
-        )
+        print("🧠 Analyzing negotiation performance...")
+        try:
+            analysis = await mistral.analyze_negotiation(
+                strategy=session.strategy,
+                transcript=analysis_input.transcript,
+                actual_outcome=analysis_input.actual_outcome,
+                tactics_context=relevant_tactics
+            )
+            print("✅ Analysis completed successfully")
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ Analysis failed: {error_msg}")
+            # Re-raise with more context
+            if "rate limit" in error_msg.lower() or "429" in error_msg:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Rate limit exceeded. Please wait a moment and try again. Mistral AI has strict rate limits on free tier."
+                )
+            raise
 
         # Generate audio feedback (optional)
         if elevenlabs is not None:

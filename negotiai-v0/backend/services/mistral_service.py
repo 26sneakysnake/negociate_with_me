@@ -140,14 +140,30 @@ Return ONLY valid JSON:
   "key_recommendations": ["...", "..."]
 }}"""
 
-        response = self.client.chat.complete(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            response_format={"type": "json_object"}
-        )
+        # Call Mistral API with retry logic
+        import time
+        max_retries = 2
 
-        analysis_data = json.loads(response.choices[0].message.content)
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.complete(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    response_format={"type": "json_object"}
+                )
+                analysis_data = json.loads(response.choices[0].message.content)
+                break  # Success, exit retry loop
+            except Exception as e:
+                error_msg = str(e)
+                if "429" in error_msg or "rate" in error_msg.lower():
+                    if attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 3  # 3s, 6s
+                        print(f"⚠️ Rate limit on analysis, waiting {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                # Re-raise if not rate limit or last attempt
+                raise
 
         return Analysis(
             session_id=strategy.session_id,
@@ -161,9 +177,32 @@ Return ONLY valid JSON:
         )
 
     def embed_text(self, text: str) -> List[float]:
-        """Generate embeddings for text"""
-        response = self.client.embeddings.create(
-            model="mistral-embed",
-            inputs=[text]
-        )
-        return response.data[0].embedding
+        """Generate embeddings for text with error handling"""
+        import time
+
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = self.client.embeddings.create(
+                    model="mistral-embed",
+                    inputs=[text]
+                )
+                return response.data[0].embedding
+            except Exception as e:
+                error_msg = str(e)
+                # Check if it's a rate limit error
+                if "429" in error_msg or "capacity exceeded" in error_msg.lower():
+                    if attempt < max_retries - 1:
+                        wait_time = (attempt + 1) * 2  # 2s, 4s
+                        print(f"⚠️ Rate limit hit, waiting {wait_time}s before retry...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        print(f"⚠️ Embedding failed after {max_retries} attempts: {error_msg}")
+                        raise Exception(f"Rate limit exceeded. Please wait a moment and try again.")
+                else:
+                    print(f"⚠️ Embedding error: {error_msg}")
+                    raise
+
+        # This shouldn't be reached, but just in case
+        raise Exception("Embedding failed after all retries")

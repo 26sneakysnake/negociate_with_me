@@ -24,7 +24,18 @@ function AnalysisPage({ strategy, onAnalysisComplete, analysis }) {
       setLocalAnalysis(result);
       onAnalysisComplete(result);
     } catch (error) {
-      alert('Error analyzing negotiation: ' + error.message);
+      const errorMessage = error.message || 'Unknown error';
+
+      // Check if it's a rate limit error
+      if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+        alert(
+          '⚠️ Rate Limit Exceeded\n\n' +
+          'Mistral AI has strict rate limits. Please wait 30 seconds and try again.\n\n' +
+          'Tip: The free tier has low limits. Consider upgrading your Mistral AI plan for production use.'
+        );
+      } else {
+        alert('Error analyzing negotiation: ' + errorMessage);
+      }
     } finally {
       setIsAnalyzing(false);
     }
