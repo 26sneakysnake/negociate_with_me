@@ -1,0 +1,45 @@
+Me: Hi Sarah, thanks for taking the time to meet today. I understand you're interested in our Enterprise Analytics Dashboard.
+
+Sarah: Yes, we've been evaluating several options over the past month. Your platform looks solid, but I'll be honest - DataViz Pro is offering us 35K which is much more in line with our budget constraints.
+
+Me: I appreciate you being upfront about that. Can I ask - beyond price, what's most important to you in making this decision? [Calibrated Question]
+
+Sarah: Well, implementation speed is critical for us. We have a board presentation in January and need this running by then. And honestly, our team isn't super technical, so ongoing support really matters. Our last vendor was a nightmare to work with.
+
+Me: It sounds like you've had some frustrating experiences with support in the past. [Labeling]
+
+Sarah: Exactly. We can't afford downtime or slow responses when we're trying to scale.
+
+Me: Those are exactly the areas where we shine. Let me address the price concern head-on. Our standard enterprise package is 60K annually, but given your timeline needs and the value of building a long-term partnership, I can offer you 52K for a 2-year commitment. That includes our priority support with 2-hour response times.
+
+Sarah: That's still significantly higher than DataViz. We really can't go above 40K in our current budget.
+
+Me: I understand budget constraints are real. Here's what I can do - if we structure this as a 3-year deal with quarterly payments to help with cash flow, I can bring it down to 48K annually. That package includes guaranteed 4-week implementation so you'll be ready well before January, priority support, and I'll also include our AI prediction module that's launching next quarter at no additional cost.
+
+Sarah: Hmm. The 3-year commitment is longer than I was hoping for...
+
+Me: What concerns you most about the 3-year term? [Calibrated Question]
+
+Sarah: Just locking in before we know if it works for our team, I guess.
+
+Me: That makes sense. How about this - we include a performance review at the 12-month mark. If we haven't hit the agreed KPIs around response time and uptime, you have an opt-out clause. Does that address your concern?
+
+Sarah: That would help, yes. But I'm still struggling with the price difference. DataViz is 13K less per year.
+
+Me: I hear you. Let me be transparent about what you're getting for that difference. [Silence - 5 second pause]
+
+Sarah: Okay, what's the breakdown?
+
+Me: With us: 2-hour support response versus their 24-hour, 4-week implementation versus 8-weeks, and the AI module which they charge 10K extra for. If you factor in the faster implementation alone, you're gaining an extra month of productivity. What's that worth to TechCorp?
+
+Sarah: Fair point. The January deadline is real.
+
+Me: And Sarah, just to be clear - at 48K with these terms, this is really the best I can do while including everything you need to be successful. The alternative would be to remove the AI module or go to standard support, but I don't think that serves your team's needs. What do you think about moving forward with this structure?
+
+Sarah: Okay. 48K for 3 years, with the opt-out clause after year one if KPIs aren't met, the AI module included, and guaranteed January implementation?
+
+Me: Exactly. And the 2-hour priority support, which I know matters given your last experience.
+
+Sarah: Alright, let's do it. Let's get the agreement drafted.
+
+Me: Fantastic! Welcome to the team, Sarah. I'll have our implementation team reach out this week to start the onboarding process.

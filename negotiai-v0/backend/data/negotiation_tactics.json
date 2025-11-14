@@ -1,0 +1,109 @@
+{
+  "tactics": [
+    {
+      "name": "Anchoring",
+      "category": "offensive",
+      "description": "Setting the initial reference point in a negotiation to influence all subsequent offers",
+      "example": "Starting with 'The market rate is typically 100K' before revealing your 80K offer",
+      "counter": "Ignore the anchor and reframe with your own data: 'Based on our analysis, the value is...'"
+    },
+    {
+      "name": "Mirroring",
+      "category": "defensive",
+      "description": "Repeating the last few words of what someone said to encourage them to elaborate",
+      "example": "Them: 'We can't go above 50K' You: '50K?'",
+      "counter": "Be aware you're being prompted to reveal more, stay concise"
+    },
+    {
+      "name": "False Urgency",
+      "category": "manipulation",
+      "description": "Creating artificial time pressure to force quick decisions",
+      "example": "'This offer expires tonight' or 'We have other interested buyers'",
+      "counter": "Call the bluff: 'If this is the right deal, it will be right next week too'"
+    },
+    {
+      "name": "Good Cop Bad Cop",
+      "category": "manipulation",
+      "description": "Two negotiators playing opposing roles to manipulate emotions",
+      "example": "One person is harsh, another is friendly and offers a 'compromise'",
+      "counter": "Recognize the pattern and address both as a single position"
+    },
+    {
+      "name": "Calibrated Questions",
+      "category": "offensive",
+      "description": "Open-ended questions starting with 'How' or 'What' that give control",
+      "example": "'How am I supposed to do that?' instead of 'I can't do that'",
+      "counter": "Prepare for 'How' questions, they're harder to refuse than direct nos"
+    },
+    {
+      "name": "Labeling",
+      "category": "defensive",
+      "description": "Acknowledging emotions to diffuse them",
+      "example": "'It seems like you're frustrated with this timeline'",
+      "counter": "Confirms feeling without committing to change"
+    },
+    {
+      "name": "Accusation Audit",
+      "category": "defensive",
+      "description": "Preemptively listing all negative things they might think about you",
+      "example": "'You probably think we're being unreasonable and asking for too much'",
+      "counter": "Disarms negative perceptions before they solidify"
+    },
+    {
+      "name": "BATNA Reveal",
+      "category": "offensive",
+      "description": "Showing you have a strong alternative to create pressure",
+      "example": "'We have another vendor offering similar terms'",
+      "counter": "Show your BATNA is stronger: 'We're talking to 3 other clients'"
+    },
+    {
+      "name": "Nibbling",
+      "category": "offensive",
+      "description": "Asking for small extras after the main deal is agreed",
+      "example": "After agreeing to price: 'Can you also include free shipping?'",
+      "counter": "Set clear boundaries: 'The package we agreed includes X, Y, Z only'"
+    },
+    {
+      "name": "Flinching",
+      "category": "defensive",
+      "description": "Showing strong negative reaction to an offer to make them reconsider",
+      "example": "Physical or verbal shock: 'Wow, that's way higher than expected'",
+      "counter": "Acknowledge but hold firm: 'I understand it's high, here's why...'"
+    },
+    {
+      "name": "Silence",
+      "category": "neutral",
+      "description": "Strategic pause after a statement to create discomfort and encourage concessions",
+      "example": "After stating your price, say nothing and wait",
+      "counter": "Be comfortable with silence, don't fill it with concessions"
+    },
+    {
+      "name": "Trade-off",
+      "category": "neutral",
+      "description": "Never give without getting something in return",
+      "example": "'If we agree to your timeline, can you increase the budget by 10%?'",
+      "counter": "Always tie concessions to reciprocal benefits"
+    },
+    {
+      "name": "Decoy Effect",
+      "category": "offensive",
+      "description": "Presenting three options where middle option looks best by comparison",
+      "example": "Basic: $50, Standard: $100, Premium: $300 (Standard looks reasonable)",
+      "counter": "Evaluate each option independently against your needs"
+    },
+    {
+      "name": "Bogey",
+      "category": "manipulation",
+      "description": "Pretending something is very important to you when it's not, to trade it later",
+      "example": "Making a big deal about delivery date, then 'giving it up' for price concession",
+      "counter": "Test if issues are real: 'If we solve X, are we good to close?'"
+    },
+    {
+      "name": "Split the Difference",
+      "category": "trap",
+      "description": "Suggesting to meet in the middle (often after anchoring high)",
+      "example": "Them: 100K, You: 60K, Them: 'Let's split at 80K'",
+      "counter": "Counter with: 'Let's look at the value drivers instead of splitting'"
+    }
+  ]
+}

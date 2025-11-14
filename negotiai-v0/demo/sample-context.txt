@@ -1,0 +1,26 @@
+Contract Negotiation - SaaS Platform License
+Company: TechCorp Solutions
+Product: Enterprise Analytics Dashboard
+
+Current Situation:
+- TechCorp interested in annual license for our Enterprise Analytics Dashboard
+- Their stated budget: "around 30-40K€"
+- Our standard pricing: 60K€ for enterprise tier
+- Competition: DataViz Pro is offering them a similar solution at 35K€
+- Our advantages: Better customer support (2-hour response time vs 24h), AI-powered features, faster implementation (4 weeks vs 8 weeks)
+
+Key Decision Maker: Sarah Chen (VP Engineering)
+Timeline: They want to close the deal before Q4 ends (2 weeks from now)
+
+Additional Context:
+- TechCorp has 200 employees, rapidly growing startup
+- They currently use Excel for analytics (very manual)
+- Previous vendor relationship ended badly due to poor support
+- They value implementation speed because of upcoming board presentation in January
+- Their technical team is not highly skilled, so ease of use and support are critical
+
+Our Position:
+- We want to maintain pricing integrity
+- Willing to offer multi-year deals for better rates
+- Can include AI module launching next quarter as sweetener
+- Priority support is a key differentiator
