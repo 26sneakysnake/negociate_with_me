@@ -25,22 +25,30 @@ def update_session_strategy(db: Session, session_id: str, strategy: Strategy) ->
     """Update session with generated strategy"""
     db_session = db.query(NegotiationSessionDB).filter(NegotiationSessionDB.id == session_id).first()
     if db_session:
-        db_session.strategy_json = strategy.dict()
+        db_session.strategy_json = strategy.model_dump()  # Pydantic v2
         db.commit()
         db.refresh(db_session)
+        print(f"✅ Strategy saved for session {session_id}")
+    else:
+        print(f"⚠️ Session {session_id} not found in database")
     return db_session
 
-def update_session_analysis(db: Session, session_id: str, analysis: Analysis) -> NegotiationSessionDB:
+def update_session_analysis(db: Session, session_id: str, analysis: Analysis, transcript: str, actual_outcome: str) -> NegotiationSessionDB:
     """Update session with analysis results"""
     db_session = db.query(NegotiationSessionDB).filter(NegotiationSessionDB.id == session_id).first()
     if db_session:
-        db_session.analysis_json = analysis.dict()
+        db_session.analysis_json = analysis.model_dump()  # Pydantic v2
+        db_session.transcript = transcript
+        db_session.actual_outcome = actual_outcome
         db_session.overall_score = analysis.performance.overall_score
         db_session.preparation_score = analysis.performance.preparation_score
         db_session.tactics_score = analysis.performance.tactics_score
         db_session.outcome_score = analysis.performance.outcome_score
         db.commit()
         db.refresh(db_session)
+        print(f"✅ Analysis saved for session {session_id}")
+    else:
+        print(f"⚠️ Session {session_id} not found in database")
     return db_session
 
 def get_session(db: Session, session_id: str) -> Optional[NegotiationSessionDB]:
