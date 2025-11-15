@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import VoiceSimulator from '../components/VoiceSimulator';
 
-export default function SimulationPage() {
-  const navigate = useNavigate();
+export default function SimulationPage({ onBack }) {
   const [simulationStarted, setSimulationStarted] = useState(false);
   const [scenarioType, setScenarioType] = useState('saas');
 
@@ -338,7 +336,7 @@ export default function SimulationPage() {
 
         <div style={{ marginTop: '20px' }}>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => onBack && onBack()}
             style={{
               background: 'none',
               border: 'none',

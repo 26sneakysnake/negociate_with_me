@@ -98,7 +98,7 @@ function App() {
         )}
 
         {currentPage === 'simulation' && (
-          <SimulationPage />
+          <SimulationPage onBack={() => setCurrentPage('prep')} />
         )}
       </main>
     </div>
