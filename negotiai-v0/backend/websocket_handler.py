@@ -163,19 +163,82 @@ class SimulationSession:
         await self._opponent_speaks()
 
     async def _opponent_speaks(self):
-        """Generate and send opponent response"""
+        """Generate and send opponent response using Mistral AI for contextual replies"""
 
-        # For MVP, use scripted responses
-        if self.script_index < len(self.opponent_script):
-            opponent_text = self.opponent_script[self.script_index]
-            self.script_index += 1
-        else:
-            # End of script
-            opponent_text = "Merci pour cette discussion. Je vais réfléchir à votre proposition."
-            await self.send_message({
-                "type": "status",
-                "message": "🏁 Simulation terminée"
-            })
+        # Build conversation context for Mistral
+        conversation_context = "\n".join([
+            f"{turn['speaker'].upper()}: {turn['text']}"
+            for turn in self.conversation_history[-5:]  # Last 5 turns for context
+        ])
+
+        # Use Mistral to generate contextual opponent response
+        try:
+            from services.mistral_service import MistralService
+            mistral = MistralService()
+
+            # Build opponent persona and instructions
+            opponent_prompt = f"""Tu es un client difficile mais professionnel en négociation commerciale.
+
+CONTEXTE DE LA NÉGOCIATION:
+Produit/Service: {self.context.get('product', 'Solution')}
+Prix demandé par le vendeur: {self.context.get('target_price', 'N/A')}
+Ton objectif: {self.context.get('opponent_goal', 'Obtenir le meilleur prix possible')}
+
+HISTORIQUE CONVERSATION:
+{conversation_context}
+
+TON RÔLE:
+- Tu es un client exigeant mais réaliste
+- Tu utilises des tactiques de négociation: lowball, fausse urgence, comparaison concurrents, objections
+- Tu ne cèdes pas facilement, mais tu peux être convaincu par de bons arguments
+- Tu restes professionnel et poli
+
+TACTIQUES À VARIER (choisis-en une selon le contexte):
+1. LOWBALL: "C'est trop cher, les concurrents font moins cher"
+2. URGENCE: "J'ai besoin d'une décision rapide"
+3. BUDGET: "Mon budget maximum est X"
+4. OBJECTION: "Il manque telle fonctionnalité"
+5. COMPARAISON: "Chez [concurrent], ils font Y"
+6. SIGNAL POSITIF: Si l'argument est convaincant, montre de l'intérêt
+
+RÈGLES:
+- Maximum 2-3 phrases
+- Réagis DIRECTEMENT à ce que vient de dire le vendeur
+- Varie tes tactiques (ne répète pas toujours la même)
+- Si l'argument du vendeur est fort, montre un peu d'intérêt
+- Si l'argument est faible, pousse plus fort
+- Tour actuel: {self.current_turn} (adapte ta pression selon l'avancement)
+
+Génère UNE réponse de client difficile qui réagit à ce qui vient d'être dit."""
+
+            # Generate response with Mistral
+            messages = [{"role": "user", "content": opponent_prompt}]
+            response = mistral.client.chat.complete(
+                model="mistral-small-latest",
+                messages=messages,
+                temperature=0.7,  # Un peu de variabilité
+                max_tokens=150
+            )
+
+            opponent_text = response.choices[0].message.content.strip()
+
+            # Fallback: if response is too long, truncate
+            if len(opponent_text) > 300:
+                opponent_text = opponent_text[:297] + "..."
+
+        except Exception as e:
+            print(f"⚠️ Error generating opponent response with Mistral: {e}")
+
+            # Fallback to scripted response if Mistral fails
+            if self.script_index < len(self.opponent_script):
+                opponent_text = self.opponent_script[self.script_index]
+                self.script_index += 1
+            else:
+                opponent_text = "Merci pour cette discussion. Je vais réfléchir à votre proposition."
+                await self.send_message({
+                    "type": "status",
+                    "message": "🏁 Simulation terminée"
+                })
 
         # Add to history
         self.conversation_history.append({
