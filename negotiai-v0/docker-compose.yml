@@ -20,6 +20,8 @@ services:
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
       - ELEVENLABS_AGENT_PHONE_NUMBER_ID=${ELEVENLABS_AGENT_PHONE_NUMBER_ID}
+      - ELEVENLABS_WEBHOOK_SECRET=${ELEVENLABS_WEBHOOK_SECRET}
+      - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
       - DATABASE_URL=postgresql://negotiai:negotiai_dev@postgres:5432/negotiai
     volumes:
       - ./backend:/app
