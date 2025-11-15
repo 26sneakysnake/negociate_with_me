@@ -139,6 +139,36 @@ Format: Valid JSON only, no markdown."""
                 "decision_factors": ["ROI", "Support quality"]
             }
 
+    async def research_company(self, company_name: str, industry: str = None) -> Dict:
+        """
+        Alias for research_client with enhanced format for phone call agent
+
+        Returns:
+            {
+                "status": "success" | "error",
+                "industry": str,
+                "size": str,
+                "summary": str,
+                "pain_points": List[str]
+            }
+        """
+        try:
+            client_data = await self.research_client(company_name, industry)
+
+            return {
+                "status": "success",
+                "industry": client_data.get("industry", "Non identifié"),
+                "size": client_data.get("company_size", "Non identifiée"),
+                "summary": f"Entreprise de taille {client_data.get('company_size', 'inconnue')} dans le secteur {client_data.get('industry', 'non identifié')}. Budget estimé : {client_data.get('budget_range', 'non déterminé')}. Facteurs de décision clés : {', '.join(client_data.get('decision_factors', []))}.",
+                "pain_points": client_data.get("pain_points", [])
+            }
+        except Exception as e:
+            print(f"❌ research_company failed: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+
     async def prepare_negotiation_context(
         self,
         product_name: str,

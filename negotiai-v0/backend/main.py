@@ -734,10 +734,34 @@ async def setup_call(data: dict):
         if not scenario_type:
             raise HTTPException(status_code=400, detail="scenario is required")
 
-        # Create agent configuration for this scenario
+        # Perform Mistral research if company_name is provided
+        research_data = None
+        company_name = user_context.get("company_name")
+
+        if company_name and web_research_service:
+            print(f"🔍 Performing Mistral research on: {company_name}")
+            try:
+                research_result = await web_research_service.research_company(company_name)
+                if research_result and research_result.get("status") == "success":
+                    research_data = {
+                        "company_info": {
+                            "name": company_name,
+                            "industry": research_result.get("industry", "Non identifié"),
+                            "size": research_result.get("size", "Non identifiée"),
+                            "context": research_result.get("summary", "Information non disponible"),
+                            "pain_points": research_result.get("pain_points", [])
+                        }
+                    }
+                    print(f"✅ Research completed: {research_data['company_info']['industry']}")
+            except Exception as e:
+                print(f"⚠️ Research failed: {e}")
+                # Continue without research data
+
+        # Create agent configuration for this scenario with research data
         agent_config = await phone_call_handler.create_agent(
             scenario_type=scenario_type,
-            user_context=user_context
+            user_context=user_context,
+            research_data=research_data
         )
 
         # Generate session ID
@@ -748,6 +772,7 @@ async def setup_call(data: dict):
             "agent_config": agent_config,
             "scenario": scenario_type,
             "context": user_context,
+            "research_data": research_data,
             "status": "ready",
             "created_at": str(uuid.uuid1())
         }
@@ -755,11 +780,16 @@ async def setup_call(data: dict):
         print(f"✅ Call session created: {session_id}")
         print(f"   Scenario: {agent_config['scenario_name']}")
 
-        return {
+        response = {
             "session_id": session_id,
             "scenario": agent_config['scenario_name'],
             "ready": True
         }
+
+        if research_data:
+            response["research_data"] = research_data
+
+        return response
 
     except HTTPException:
         raise

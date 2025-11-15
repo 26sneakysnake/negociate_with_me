@@ -149,14 +149,16 @@ class PhoneCallHandler:
     async def create_agent(
         self,
         scenario_type: str,
-        user_context: Dict
+        user_context: Dict,
+        research_data: Dict = None
     ) -> Dict:
         """
-        Create ElevenLabs Conversational AI agent for phone call
+        Create ElevenLabs Conversational AI agent for phone call with enhanced context
 
         Args:
             scenario_type: Type of scenario (saas, freelance, salary, etc.)
             user_context: User's negotiation context
+            research_data: Optional Mistral research results about the company/client
 
         Returns:
             {
@@ -176,9 +178,30 @@ class PhoneCallHandler:
         minimum_price = user_context.get('minimum_price', 'non spécifié')
         red_lines = user_context.get('red_lines', [])
         product = user_context.get('product', 'la solution')
+        company_name = user_context.get('company_name', '')
 
-        # Build full agent prompt
+        # Build research context section
+        research_context = ""
+        if research_data and research_data.get('company_info'):
+            info = research_data['company_info']
+            research_context = f"""
+INFORMATIONS RECHERCHÉES SUR L'ENTREPRISE/CLIENT:
+- Entreprise : {info.get('name', company_name)}
+- Secteur : {info.get('industry', 'Non identifié')}
+- Taille : {info.get('size', 'Non identifiée')}
+- Contexte business : {info.get('context', 'Information non disponible')}
+- Points de douleur identifiés : {', '.join(info.get('pain_points', [])) if info.get('pain_points') else 'Non identifiés'}
+
+UTILISEZ CES INFORMATIONS POUR:
+- Personnaliser vos arguments selon le secteur et la taille de l'entreprise
+- Mentionner des pain points spécifiques à leur industrie
+- Adapter votre approche selon leur maturité business
+"""
+
+        # Build full agent prompt with clear objectives
         full_prompt = f"""{scenario['persona']}
+
+{research_context}
 
 CONTEXTE SPÉCIFIQUE DE CETTE NÉGOCIATION:
 - Produit/Service négocié : {product}
@@ -186,18 +209,55 @@ CONTEXTE SPÉCIFIQUE DE CETTE NÉGOCIATION:
 - Prix minimum acceptable pour le vendeur : {minimum_price}
 - Red lines du vendeur : {', '.join(red_lines) if red_lines else 'Non communiquées'}
 
-CALIBRATION:
-Utilisez ces informations pour calibrer vos tactiques :
-- Si le prix demandé est élevé, soyez encore plus agressif sur la négociation
-- Testez les red lines subtilement pour voir les limites
-- Adaptez votre stratégie selon les réponses du vendeur
+🎯 VOTRE OBJECTIF PRINCIPAL:
+Obtenir le meilleur prix possible pour {product}, en visant au moins 20-30% en dessous du prix demandé.
+Si le vendeur accepte votre offre finale OU si vous trouvez un compromis gagnant-gagnant, CONCLURE l'accord.
 
-RÈGLES IMPORTANTES:
-- Restez dans le personnage du {scenario['name']}
-- Progressez logiquement dans la négociation (ne cédez pas tout de suite)
-- Utilisez des tactiques variées (pas toujours la même)
-- Réagissez de manière réaliste aux arguments du vendeur
-- Terminez la conversation si accord trouvé OU si impasse (après 5-7 échanges)
+📋 STRUCTURE DE LA NÉGOCIATION (7-10 échanges maximum):
+
+1. **PHASE DÉCOUVERTE** (2-3 échanges):
+   - Poser des questions sur le produit/service
+   - Identifier les points faibles de l'offre
+   - Établir la relation
+
+2. **PHASE OBJECTION** (2-3 échanges):
+   - Présenter des objections crédibles (prix, timing, alternatives)
+   - Tester les red lines subtilement
+   - Demander des concessions
+
+3. **PHASE NÉGOCIATION** (2-3 échanges):
+   - Faire une première offre basse (50-60% du prix demandé)
+   - Négocier en remontant progressivement
+   - Utiliser des tactiques variées (silence, deadline, comparaison)
+
+4. **PHASE CONCLUSION** (1-2 échanges):
+   - Soit ACCORD trouvé → "Parfait, je confirme. Envoyez-moi le contrat."
+   - Soit IMPASSE → "Je ne peux pas aller plus haut. Merci pour votre temps."
+   - Soit COMPROMIS → Proposer un middle ground créatif (paiement échelonné, services additionnels, etc.)
+
+🎪 TACTIQUES À UTILISER (variez-les):
+- **Ancrage**: Donnez un prix de référence bas dès le début
+- **Silence**: Après une offre du vendeur, restez silencieux 3-4 secondes
+- **Budget limité**: "Mon budget ne me permet pas d'aller au-delà de X"
+- **Alternative**: "J'ai vu une solution similaire à Y prix"
+- **Deadline**: "Je dois décider cette semaine"
+- **Lot**: "Si je prends X et Y ensemble, quel prix pouvez-vous faire?"
+- **Concession réciproque**: "Si j'accepte Z, pouvez-vous baisser le prix à X?"
+
+⚠️ RÈGLES CRITIQUES:
+- Restez RÉALISTE et COHÉRENT dans votre personnage
+- NE CÉDEZ PAS trop facilement (minimum 5 échanges avant accord)
+- VARIEZ vos tactiques (ne répétez pas la même objection)
+- ÉCOUTEZ les arguments du vendeur et ADAPTEZ-VOUS
+- TERMINEZ la conversation clairement (accord, refus, ou compromis)
+- Si le vendeur atteint vos objectifs (bon prix + bonnes conditions), CONCLUEZ
+
+🏁 CRITÈRES DE FIN DE CONVERSATION:
+✅ **SUCCÈS**: Prix négocié à -20% ou plus du prix initial + conditions acceptables
+✅ **COMPROMIS**: Prix intermédiaire + avantages additionnels (garantie, support, etc.)
+❌ **ÉCHEC**: Vendeur inflexible, pas d'accord possible
+
+IMPORTANT: La négociation doit être DYNAMIQUE et INTÉRESSANTE. Créez de la tension, mais cherchez une issue gagnant-gagnant si possible.
 
 PREMIER MESSAGE À DIRE:
 "{scenario['first_message']}"
@@ -206,6 +266,8 @@ PREMIER MESSAGE À DIRE:
         print(f"🎙️ Creating ElevenLabs agent for scenario: {scenario_type}")
         print(f"   Product: {product}")
         print(f"   Target price: {target_price}")
+        if research_data:
+            print(f"   📊 Research data integrated: {research_data.get('company_info', {}).get('name', 'N/A')}")
 
         # Create ElevenLabs Conversational AI agent via REST API
         try:
