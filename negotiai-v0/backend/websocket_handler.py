@@ -328,13 +328,13 @@ async def handle_simulation_websocket(
     Main WebSocket handler for voice simulation
 
     Args:
-        websocket: WebSocket connection
+        websocket: WebSocket connection (already accepted)
         elevenlabs_agent: ElevenLabs client instance
         realtime_analyzer: Realtime analyzer instance
         context: Negotiation context from client
     """
 
-    await websocket.accept()
+    # NOTE: websocket.accept() is already called in main.py
     session_id = str(uuid.uuid4())
 
     print(f"🔌 New simulation session: {session_id}")
