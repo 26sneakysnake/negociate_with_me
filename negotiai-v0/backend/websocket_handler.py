@@ -177,52 +177,58 @@ class SimulationSession:
             mistral = MistralService()
 
             # Build opponent persona and instructions
-            opponent_prompt = f"""Tu es un client difficile mais professionnel en négociation commerciale.
+            opponent_prompt = f"""Tu es un client en train de négocier. Réponds UNIQUEMENT avec ce que tu dirais verbalement, sans aucune métadonnée ni formatage.
 
-CONTEXTE DE LA NÉGOCIATION:
-Produit/Service: {self.context.get('product', 'Solution')}
-Prix demandé par le vendeur: {self.context.get('target_price', 'N/A')}
-Ton objectif: {self.context.get('opponent_goal', 'Obtenir le meilleur prix possible')}
+CONTEXTE:
+- Produit: {self.context.get('product', 'Solution')}
+- Prix initial vendeur: {self.context.get('target_price', 'N/A')}
+- Ton objectif: {self.context.get('opponent_goal', 'Obtenir le meilleur prix')}
 
-HISTORIQUE CONVERSATION:
+CONVERSATION:
 {conversation_context}
 
-TON RÔLE:
-- Tu es un client exigeant mais réaliste
-- Tu utilises des tactiques de négociation: lowball, fausse urgence, comparaison concurrents, objections
-- Tu ne cèdes pas facilement, mais tu peux être convaincu par de bons arguments
-- Tu restes professionnel et poli
+TON STYLE:
+- Client professionnel mais exigeant
+- Tu négocies dur mais tu es réaliste
+- Tour {self.current_turn}: {"Début - sois ferme sur le prix" if self.current_turn < 3 else "Milieu - évalue sérieusement" if self.current_turn < 6 else "Avancé - montre de l'intérêt si bon deal"}
 
-TACTIQUES À VARIER (choisis-en une selon le contexte):
-1. LOWBALL: "C'est trop cher, les concurrents font moins cher"
-2. URGENCE: "J'ai besoin d'une décision rapide"
-3. BUDGET: "Mon budget maximum est X"
-4. OBJECTION: "Il manque telle fonctionnalité"
-5. COMPARAISON: "Chez [concurrent], ils font Y"
-6. SIGNAL POSITIF: Si l'argument est convaincant, montre de l'intérêt
-
-RÈGLES:
-- Maximum 2-3 phrases
+IMPORTANT:
+- Réponds en 2-3 phrases MAX
+- UNIQUEMENT ton dialogue direct (comme si tu parlais)
+- PAS de "Réponse:", "Client:", ou formatage markdown **
 - Réagis DIRECTEMENT à ce que vient de dire le vendeur
-- Varie tes tactiques (ne répète pas toujours la même)
-- Si l'argument du vendeur est fort, montre un peu d'intérêt
-- Si l'argument est faible, pousse plus fort
-- Tour actuel: {self.current_turn} (adapte ta pression selon l'avancement)
+- Varie tes tactiques (prix trop élevé, concurrence, budget, urgence, objections)
 
-Génère UNE réponse de client difficile qui réagit à ce qui vient d'être dit."""
+EXEMPLE BON FORMAT:
+"48 000€, c'est mieux mais ça reste élevé pour nous. J'ai des propositions à 35 000€ ailleurs. Qu'est-ce qui justifie vraiment cette différence ?"
+
+EXEMPLE MAUVAIS FORMAT (À ÉVITER):
+"**Réponse:** 48 000€ c'est mieux..."
+"Client dit: 48 000€..."
+
+Réponds maintenant (UNIQUEMENT dialogue pur):"""
 
             # Generate response with Mistral
             messages = [{"role": "user", "content": opponent_prompt}]
             response = mistral.client.chat.complete(
                 model="mistral-small-latest",
                 messages=messages,
-                temperature=0.7,  # Un peu de variabilité
+                temperature=0.7,
                 max_tokens=150
             )
 
             opponent_text = response.choices[0].message.content.strip()
 
-            # Fallback: if response is too long, truncate
+            # Clean up any formatting that Mistral might add
+            import re
+            # Remove markdown bold
+            opponent_text = re.sub(r'\*\*([^*]+)\*\*', r'\1', opponent_text)
+            # Remove "Réponse:", "Client:", etc.
+            opponent_text = re.sub(r'^(Réponse|Client|Moi)\s*[:\-]\s*', '', opponent_text, flags=re.IGNORECASE)
+            # Remove quotes at start/end if present
+            opponent_text = opponent_text.strip('"\'')
+
+            # Truncate if too long
             if len(opponent_text) > 300:
                 opponent_text = opponent_text[:297] + "..."
 
