@@ -1,0 +1,205 @@
+.step5-score {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.score-hero {
+  background: white;
+  border: 4px solid;
+  border-radius: 20px;
+  padding: 50px 30px;
+  text-align: center;
+  margin-bottom: 50px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.score-circle {
+  width: 200px;
+  height: 200px;
+  border: 12px solid;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.score-value {
+  font-size: 72px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.score-max {
+  font-size: 24px;
+  color: #999;
+  font-weight: 600;
+}
+
+.score-label {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.outcome-badge {
+  display: inline-block;
+  color: white;
+  padding: 10px 24px;
+  border-radius: 25px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.analysis-section {
+  margin-bottom: 40px;
+}
+
+.analysis-section h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.analysis-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.analysis-card.strength {
+  background: #e8f5e9;
+  border-left: 4px solid #4CAF50;
+}
+
+.analysis-card.weakness {
+  background: #fff3e0;
+  border-left: 4px solid #FF9800;
+}
+
+.card-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.card-text {
+  flex: 1;
+  color: #333;
+}
+
+.tactics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tactic-badge {
+  background: #667eea;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recommendation-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: #e3f2fd;
+  padding: 16px 20px;
+  border-radius: 10px;
+  border-left: 4px solid #2196F3;
+}
+
+.rec-number {
+  background: #2196F3;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.rec-text {
+  flex: 1;
+  color: #1565C0;
+  line-height: 1.5;
+}
+
+.final-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.restart-btn,
+.review-btn {
+  flex: 1;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.restart-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+}
+
+.restart-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+}
+
+.review-btn {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.review-btn:hover {
+  background: #d0d0d0;
+}
+
+@media (max-width: 768px) {
+  .score-circle {
+    width: 150px;
+    height: 150px;
+  }
+
+  .score-value {
+    font-size: 56px;
+  }
+
+  .final-actions {
+    flex-direction: column;
+  }
+}
