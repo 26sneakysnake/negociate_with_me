@@ -4,6 +4,7 @@ Uses ElevenLabs built-in Twilio integration for phone calls
 """
 
 from elevenlabs.client import ElevenLabs
+import httpx
 import json
 from typing import Dict
 from services.mistral_service import MistralService
@@ -137,7 +138,9 @@ class PhoneCallHandler:
         agent_phone_number_id: str = None
     ):
         self.client = ElevenLabs(api_key=elevenlabs_api_key)
+        self.elevenlabs_api_key = elevenlabs_api_key
         self.agent_phone_number_id = agent_phone_number_id
+        self.api_base_url = "https://api.elevenlabs.io/v1"
 
         if not agent_phone_number_id:
             print("⚠️ agent_phone_number_id not configured - phone calls may not work")
@@ -204,36 +207,51 @@ PREMIER MESSAGE À DIRE:
         print(f"   Product: {product}")
         print(f"   Target price: {target_price}")
 
-        # Create ElevenLabs Conversational AI agent
+        # Create ElevenLabs Conversational AI agent via REST API
         try:
-            agent = self.client.conversational_ai.create_agent(
-                conversation_config={
-                    "agent": {
-                        "prompt": {
-                            "prompt": full_prompt
-                        },
-                        "first_message": scenario['first_message'],
-                        "language": "fr"
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.api_base_url}/convai/agents/create",
+                    headers={
+                        "xi-api-key": self.elevenlabs_api_key,
+                        "Content-Type": "application/json"
                     },
-                    "tts": {
-                        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
-                        "model_id": "eleven_turbo_v2_5"
+                    json={
+                        "conversation_config": {
+                            "agent": {
+                                "prompt": {
+                                    "prompt": full_prompt
+                                },
+                                "first_message": scenario['first_message'],
+                                "language": "fr"
+                            },
+                            "tts": {
+                                "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+                                "model_id": "eleven_turbo_v2_5"
+                            }
+                        }
+                    },
+                    timeout=30.0
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    agent_id = result.get("agent_id")
+
+                    print(f"✅ ElevenLabs agent created: {agent_id}")
+
+                    return {
+                        "agent_id": agent_id,
+                        "scenario_type": scenario_type,
+                        "scenario_name": scenario['name'],
+                        "prompt": full_prompt,
+                        "first_message": scenario['first_message'],
+                        "user_context": user_context
                     }
-                }
-            )
-
-            agent_id = agent.agent_id
-
-            print(f"✅ ElevenLabs agent created: {agent_id}")
-
-            return {
-                "agent_id": agent_id,
-                "scenario_type": scenario_type,
-                "scenario_name": scenario['name'],
-                "prompt": full_prompt,
-                "first_message": scenario['first_message'],
-                "user_context": user_context
-            }
+                else:
+                    error_msg = f"API returned {response.status_code}: {response.text}"
+                    print(f"❌ Error creating agent: {error_msg}")
+                    raise Exception(error_msg)
 
         except Exception as e:
             print(f"❌ Error creating ElevenLabs agent: {e}")
