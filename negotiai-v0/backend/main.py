@@ -27,6 +27,7 @@ from websocket_handler import handle_simulation_websocket
 from services.web_research_service import WebResearchService
 from services.elevenlabs_agent_service import ElevenLabsConversationalAgent
 from calls.phone_handler import PhoneCallHandler, get_available_scenarios
+from calls.call_analytics import analyze_negotiation_performance
 import uuid
 
 # Initialize FastAPI
@@ -1094,6 +1095,140 @@ async def delete_call_session(session_id: str):
         return {"status": "deleted"}
 
     return {"status": "not_found"}
+
+
+# ============================================================================
+# WEBHOOK ENDPOINTS (ElevenLabs Callbacks)
+# ============================================================================
+
+@app.post("/webhook/elevenlabs/call-ended")
+async def elevenlabs_call_ended_webhook(data: dict):
+    """
+    Webhook appelé par ElevenLabs quand un appel se termine
+
+    ElevenLabs envoie:
+    {
+        "call_id": str,
+        "agent_id": str,
+        "duration": int,
+        "transcript": str,
+        "status": "completed" | "failed",
+        "metadata": {...}
+    }
+    """
+
+    print(f"\n{'='*70}")
+    print(f"📞 WEBHOOK: Call ended")
+    print(f"{'='*70}")
+    print(f"   Call ID: {data.get('call_id')}")
+    print(f"   Agent ID: {data.get('agent_id')}")
+    print(f"   Status: {data.get('status')}")
+    print(f"   Duration: {data.get('duration')}s")
+    print(f"{'='*70}\n")
+
+    try:
+        call_id = data.get("call_id")
+        agent_id = data.get("agent_id")
+        transcript = data.get("transcript", "")
+        duration = data.get("duration", 0)
+        status = data.get("status", "unknown")
+
+        # Find session by agent_id
+        session_id = None
+        for sid, session in call_sessions.items():
+            if session.get("agent_config", {}).get("agent_id") == agent_id:
+                session_id = sid
+                break
+
+        if not session_id:
+            print(f"⚠️ No session found for agent_id: {agent_id}")
+            return {"status": "no_session_found", "message": "Session not found for this agent"}
+
+        session = call_sessions[session_id]
+
+        # Store transcript and metadata
+        session["transcript"] = transcript
+        session["duration"] = duration
+        session["call_id"] = call_id
+        session["call_status"] = status
+        session["status"] = "analyzing"
+
+        print(f"📝 Transcript received ({len(transcript)} chars)")
+
+        # Analyze performance with Mistral
+        if mistral and transcript:
+            print("🎯 Starting negotiation performance analysis...")
+            analysis = await analyze_negotiation_performance(
+                transcript=transcript,
+                user_context=session["context"],
+                mistral_service=mistral
+            )
+
+            session["analysis"] = analysis
+            session["status"] = "completed"
+
+            print(f"✅ Analysis completed")
+            print(f"   Score: {analysis.get('score')}/100")
+            print(f"   Outcome: {analysis.get('outcome')}")
+        else:
+            session["status"] = "completed"
+            print("⚠️ No Mistral service available - skipping analysis")
+
+        return {
+            "status": "success",
+            "message": "Call data processed and analyzed",
+            "session_id": session_id
+        }
+
+    except Exception as e:
+        print(f"❌ Webhook error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/call/analysis/{session_id}")
+async def get_call_analysis(session_id: str):
+    """
+    Récupérer l'analyse et le score d'une négociation
+
+    Returns:
+        {
+            "status": "analyzing" | "completed",
+            "transcript": str,
+            "duration": int,
+            "analysis": {
+                "score": int,
+                "outcome": str,
+                "strengths": List[str],
+                "weaknesses": List[str],
+                "tactics_used": List[str],
+                "price_negotiated": str | null,
+                "recommendations": List[str]
+            }
+        }
+    """
+
+    session = call_sessions.get(session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session["status"] not in ["analyzing", "completed"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Call not yet completed. Status: {session['status']}"
+        )
+
+    return {
+        "status": session["status"],
+        "transcript": session.get("transcript"),
+        "duration": session.get("duration"),
+        "call_status": session.get("call_status"),
+        "analysis": session.get("analysis"),
+        "context": session["context"],
+        "research_data": session.get("research_data")
+    }
 
 
 if __name__ == "__main__":
