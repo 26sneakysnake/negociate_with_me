@@ -309,6 +309,13 @@ PREMIER MESSAGE À DIRE:
             if webhook_config:
                 payload["conversation_config"]["webhook"] = webhook_config
 
+            # DEBUG: Log the exact payload being sent to ElevenLabs
+            print(f"\n{'='*70}")
+            print(f"📤 PAYLOAD ENVOYÉ À ELEVENLABS:")
+            print(f"{'='*70}")
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            print(f"{'='*70}\n")
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.api_base_url}/convai/agents/create",
