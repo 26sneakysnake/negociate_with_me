@@ -19,6 +19,7 @@ services:
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - ELEVENLABS_AGENT_PHONE_NUMBER_ID=${ELEVENLABS_AGENT_PHONE_NUMBER_ID}
       - DATABASE_URL=postgresql://negotiai:negotiai_dev@postgres:5432/negotiai
     volumes:
       - ./backend:/app
