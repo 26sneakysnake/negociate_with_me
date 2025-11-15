@@ -47,6 +47,7 @@ Return a JSON with:
 Format: Valid JSON only, no markdown."""
 
         try:
+            print(f"🔍 Calling Mistral API for product research: {product_name}")
             response = self.mistral.client.chat.complete(
                 model="mistral-small-latest",
                 messages=[{"role": "user", "content": query}],
@@ -54,13 +55,21 @@ Format: Valid JSON only, no markdown."""
                 temperature=0.3
             )
 
+            print(f"📥 Received response from Mistral API")
+            print(f"   Raw content: {response.choices[0].message.content[:200]}...")
+
             research_data = json.loads(response.choices[0].message.content)
             print(f"✅ Solution research completed for: {product_name}")
+            print(f"   Features found: {len(research_data.get('features', []))}")
+            print(f"   Competitors found: {len(research_data.get('competitors', []))}")
 
             return research_data
 
         except Exception as e:
-            print(f"⚠️ Web research failed: {e}")
+            print(f"❌ Web research failed with exception: {type(e).__name__}")
+            print(f"❌ Error details: {str(e)}")
+            import traceback
+            print(f"❌ Traceback:\n{traceback.format_exc()}")
             return {
                 "features": ["Feature 1", "Feature 2", "Feature 3"],
                 "typical_pricing": "Market rate",
@@ -99,6 +108,7 @@ Return a JSON with:
 Format: Valid JSON only, no markdown."""
 
         try:
+            print(f"🔍 Calling Mistral API for client research: {company_name}")
             response = self.mistral.client.chat.complete(
                 model="mistral-small-latest",
                 messages=[{"role": "user", "content": query}],
@@ -106,13 +116,21 @@ Format: Valid JSON only, no markdown."""
                 temperature=0.3
             )
 
+            print(f"📥 Received response from Mistral API")
+            print(f"   Raw content: {response.choices[0].message.content[:200]}...")
+
             client_data = json.loads(response.choices[0].message.content)
             print(f"✅ Client research completed for: {company_name}")
+            print(f"   Company size: {client_data.get('company_size')}")
+            print(f"   Industry: {client_data.get('industry')}")
 
             return client_data
 
         except Exception as e:
-            print(f"⚠️ Client research failed: {e}")
+            print(f"❌ Client research failed with exception: {type(e).__name__}")
+            print(f"❌ Error details: {str(e)}")
+            import traceback
+            print(f"❌ Traceback:\n{traceback.format_exc()}")
             return {
                 "company_size": "SME",
                 "industry": industry or "Technology",

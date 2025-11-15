@@ -22,6 +22,13 @@ class ElevenLabsConversationalAgent:
     """
 
     def __init__(self, api_key: str):
+        # Validate API key is not a placeholder
+        if not api_key or 'your_' in api_key.lower() or '_here' in api_key.lower():
+            raise ValueError(
+                "ELEVENLABS_API_KEY is not configured! "
+                "Please update your .env file with a real API key from https://elevenlabs.io/"
+            )
+
         self.api_key = api_key
         self.base_url = "https://api.elevenlabs.io/v1"
         self.agent_id = None

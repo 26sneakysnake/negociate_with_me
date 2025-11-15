@@ -63,6 +63,14 @@ def init_services():
     try:
         mistral = MistralService()
         print("✅ Mistral service initialized")
+    except ValueError as e:
+        print(f"\n{'='*70}")
+        print(f"❌ MISTRAL SERVICE NOT AVAILABLE")
+        print(f"{'='*70}")
+        print(f"   Reason: {e}")
+        print(f"   Impact: Research, strategy, and opponent AI will NOT work")
+        print(f"   Solution: See API_KEYS_SETUP.md for configuration instructions")
+        print(f"{'='*70}\n")
     except Exception as e:
         print(f"⚠️ Mistral service failed to initialize: {e}")
 
@@ -118,6 +126,15 @@ def init_services():
             print("✅ ElevenLabs Conversational AI initialized")
         else:
             print("⚠️ ElevenLabs Conversational AI: No API key provided")
+    except ValueError as e:
+        print(f"\n{'='*70}")
+        print(f"❌ ELEVENLABS CONVERSATIONAL AI NOT AVAILABLE")
+        print(f"{'='*70}")
+        print(f"   Reason: {e}")
+        print(f"   Impact: Voice-to-voice conversation will NOT work")
+        print(f"   Workaround: Use TEXT mode instead of VOICE mode")
+        print(f"   Solution: See API_KEYS_SETUP.md for configuration instructions")
+        print(f"{'='*70}\n")
     except Exception as e:
         print(f"⚠️ ElevenLabs Conversational AI failed to initialize: {e}")
 

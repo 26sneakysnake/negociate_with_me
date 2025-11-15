@@ -9,6 +9,14 @@ import uuid
 class MistralService:
     def __init__(self):
         settings = get_settings()
+
+        # Validate API key is not a placeholder
+        if not settings.MISTRAL_API_KEY or 'your_' in settings.MISTRAL_API_KEY.lower() or '_here' in settings.MISTRAL_API_KEY.lower():
+            raise ValueError(
+                "MISTRAL_API_KEY is not configured! "
+                "Please update your .env file with a real API key from https://console.mistral.ai/"
+            )
+
         self.client = Mistral(api_key=settings.MISTRAL_API_KEY)
         self.model = settings.MISTRAL_MODEL
 
