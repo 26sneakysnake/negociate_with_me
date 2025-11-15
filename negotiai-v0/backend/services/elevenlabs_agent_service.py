@@ -108,13 +108,17 @@ class ElevenLabsConversationalAgent:
                         "config": agent_config
                     }
                 else:
+                    error_msg = f"ElevenLabs API error {response.status_code}: {response.text}"
                     print(f"❌ Failed to create agent: {response.status_code}")
                     print(f"   Response: {response.text}")
-                    return self._get_fallback_config(context)
+                    print(f"⚠️ Note: ElevenLabs Conversational AI may require special access or different API structure")
+                    # Return error instead of fallback so frontend can handle it
+                    raise Exception(error_msg)
 
         except Exception as e:
             print(f"⚠️ Error creating conversational agent: {e}")
-            return self._get_fallback_config(context)
+            print(f"💡 Suggestion: The Conversational AI API may not be available. Consider using text mode instead.")
+            raise  # Re-raise to let the endpoint handle it
 
     def _build_agent_prompt(
         self,

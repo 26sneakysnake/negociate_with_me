@@ -43,8 +43,23 @@ export default function ElevenLabsVoiceChat({ context, onClose }) {
 
       } catch (err) {
         console.error('❌ Setup error:', err);
-        setError(err.message);
-        setStatus('error');
+
+        // Check if it's an ElevenLabs API error
+        if (err.message && err.message.includes('ElevenLabs API')) {
+          setError('ElevenLabs Conversational AI n\'est pas disponible actuellement. Veuillez utiliser le mode Texte à la place.');
+          setStatus('error');
+
+          // Automatically switch to text mode after 3 seconds
+          setTimeout(() => {
+            if (onClose) {
+              alert('L\'API ElevenLabs Conversational AI n\'est pas disponible.\n\nRedirection vers le mode Texte...');
+              onClose();
+            }
+          }, 3000);
+        } else {
+          setError(err.message);
+          setStatus('error');
+        }
       }
     };
 

@@ -5,7 +5,7 @@ import ElevenLabsVoiceChat from '../components/ElevenLabsVoiceChat';
 export default function SimulationPage({ onBack }) {
   const [currentStep, setCurrentStep] = useState('setup'); // setup, research, simulation
   const [scenarioType, setScenarioType] = useState('saas');
-  const [simulationMode, setSimulationMode] = useState('voice'); // 'voice' or 'text'
+  const [simulationMode, setSimulationMode] = useState('text'); // 'voice' or 'text' - default to text for stability
 
   // Research fields
   const [productName, setProductName] = useState('');
@@ -275,6 +275,19 @@ export default function SimulationPage({ onBack }) {
         }}>
           <h3 style={{ marginTop: 0, marginBottom: '16px' }}>🎯 Choisissez le mode de simulation</h3>
 
+          {/* Warning about voice mode */}
+          <div style={{
+            background: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '16px',
+            fontSize: '14px'
+          }}>
+            ⚠️ <strong>Note:</strong> Le mode Voice-to-Voice nécessite l'API ElevenLabs Conversational AI qui pourrait ne pas être disponible.
+            Le <strong>mode Texte</strong> est recommandé pour une expérience stable.
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <button
               onClick={() => setSimulationMode('voice')}
@@ -284,13 +297,14 @@ export default function SimulationPage({ onBack }) {
                 borderRadius: '12px',
                 background: simulationMode === 'voice' ? '#f0f4ff' : 'white',
                 cursor: 'pointer',
-                textAlign: 'left'
+                textAlign: 'left',
+                opacity: 0.7
               }}
             >
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎤</div>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Voice-to-Voice</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Voice-to-Voice (Beta)</div>
               <div style={{ fontSize: '13px', color: '#666' }}>
-                Conversation vocale en temps réel avec ElevenLabs AI
+                Conversation vocale en temps réel - Peut nécessiter configuration
               </div>
             </button>
 
