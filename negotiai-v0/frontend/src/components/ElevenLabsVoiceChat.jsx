@@ -8,7 +8,6 @@ import React, { useState, useEffect, useRef } from 'react';
 export default function ElevenLabsVoiceChat({ context, onClose }) {
   const [status, setStatus] = useState('initializing'); // initializing, ready, connecting, connected, speaking, listening, error
   const [agentId, setAgentId] = useState(null);
-  const [conversationId, setConversationId] = useState(null);
   const [transcript, setTranscript] = useState([]);
   const [error, setError] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -21,40 +20,40 @@ export default function ElevenLabsVoiceChat({ context, onClose }) {
 
   // Initialize agent and setup
   useEffect(() => {
+    const setupAgent = async () => {
+      try {
+        setStatus('initializing');
+
+        // Create ElevenLabs Conversational AI agent
+        const response = await fetch('http://localhost:8000/api/simulation/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(context)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to setup agent: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('✅ Agent created:', data);
+
+        setAgentId(data.agent_id);
+        setStatus('ready');
+
+      } catch (err) {
+        console.error('❌ Setup error:', err);
+        setError(err.message);
+        setStatus('error');
+      }
+    };
+
     setupAgent();
     return () => {
       cleanup();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const setupAgent = async () => {
-    try {
-      setStatus('initializing');
-
-      // Create ElevenLabs Conversational AI agent
-      const response = await fetch('http://localhost:8000/api/simulation/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(context)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to setup agent: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Agent created:', data);
-
-      setAgentId(data.agent_id);
-      setConversationId(data.conversation_id);
-      setStatus('ready');
-
-    } catch (err) {
-      console.error('❌ Setup error:', err);
-      setError(err.message);
-      setStatus('error');
-    }
-  };
 
   const startConversation = async () => {
     try {
