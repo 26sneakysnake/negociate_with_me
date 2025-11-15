@@ -1,5 +1,5 @@
 # backend/main.py
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session as DBSession
@@ -19,6 +19,11 @@ import PyPDF2
 import io
 import json
 import os
+
+# Import new simulation modules
+from audio.elevenlabs_client import ElevenLabsVoiceAgent
+from ai.realtime_analyzer import RealtimeAnalyzer
+from websocket_handler import handle_simulation_websocket
 
 # Initialize FastAPI
 app = FastAPI(title="NegotiAI v0")
@@ -44,9 +49,13 @@ mistral = None
 qdrant = None
 elevenlabs = None
 
+# New services for real-time simulation
+elevenlabs_voice_agent = None
+realtime_analyzer = None
+
 def init_services():
     """Initialize services with error handling"""
-    global mistral, qdrant, elevenlabs
+    global mistral, qdrant, elevenlabs, elevenlabs_voice_agent, realtime_analyzer
     try:
         mistral = MistralService()
         print("✅ Mistral service initialized")
@@ -64,6 +73,29 @@ def init_services():
         print("✅ ElevenLabs service initialized")
     except Exception as e:
         print(f"⚠️ ElevenLabs service failed to initialize: {e}")
+
+    # Initialize new simulation services
+    try:
+        if settings.ELEVENLABS_API_KEY:
+            elevenlabs_voice_agent = ElevenLabsVoiceAgent(api_key=settings.ELEVENLABS_API_KEY)
+            print("✅ ElevenLabs Voice Agent initialized")
+        else:
+            print("⚠️ ElevenLabs Voice Agent: No API key provided")
+    except Exception as e:
+        print(f"⚠️ ElevenLabs Voice Agent failed to initialize: {e}")
+
+    try:
+        if settings.MISTRAL_API_KEY:
+            realtime_analyzer = RealtimeAnalyzer(
+                mistral_key=settings.MISTRAL_API_KEY,
+                qdrant_url=settings.QDRANT_URL if hasattr(settings, 'QDRANT_URL') else None,
+                qdrant_key=settings.QDRANT_API_KEY if hasattr(settings, 'QDRANT_API_KEY') else None
+            )
+            print("✅ Realtime Analyzer initialized")
+        else:
+            print("⚠️ Realtime Analyzer: No Mistral API key provided")
+    except Exception as e:
+        print(f"⚠️ Realtime Analyzer failed to initialize: {e}")
 
 # In-memory session storage (use Redis in production)
 sessions: Dict[str, Session] = {}
@@ -310,6 +342,119 @@ async def get_session(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+# ============================================================================
+# REAL-TIME VOICE SIMULATION ENDPOINTS (NEW)
+# ============================================================================
+
+@app.post("/api/simulation/setup")
+async def setup_simulation(context: dict):
+    """
+    Setup voice simulation session
+
+    Args:
+        context: {
+            "product": str,
+            "target_price": str,
+            "minimum_price": str,
+            "value_props": List[str],
+            "opponent_goal": str,
+            "opponent_script": List[str] (optional)
+        }
+
+    Returns:
+        {
+            "status": "ready",
+            "agent_id": str,
+            "message": str
+        }
+    """
+
+    if not elevenlabs_voice_agent:
+        raise HTTPException(
+            status_code=503,
+            detail="ElevenLabs Voice Agent not available. Check API key configuration."
+        )
+
+    try:
+        # Create opponent agent configuration
+        agent_config = await elevenlabs_voice_agent.create_opponent_agent(context)
+
+        return {
+            "status": "ready",
+            "agent_id": agent_config["agent_id"],
+            "message": "Simulation ready to start"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error setting up simulation: {str(e)}")
+
+
+@app.websocket("/ws/simulation")
+async def simulation_websocket(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time voice simulation
+
+    Client should first send simulation context, then audio chunks or transcripts
+
+    Message types from client:
+        - {"type": "start", "context": {...}} - Start simulation
+        - {"type": "audio", "audio": "base64...", "text": "..."} - User audio/text
+        - {"type": "transcript", "text": "..."} - User transcript only
+        - {"type": "autopilot_toggle", "enabled": bool} - Toggle auto-pilot
+        - {"type": "autopilot_activate", "tactic": str} - Activate auto-pilot
+        - {"type": "stop"} - Stop simulation
+
+    Message types to client:
+        - {"type": "status", "message": str} - Status updates
+        - {"type": "transcript", "speaker": str, "text": str, "turn": int} - Transcript
+        - {"type": "opponent_audio", "audio": "base64...", "format": "mp3"} - Audio from opponent
+        - {"type": "suggestion", "suggestion": str, "priority": str, "tactic": str, ...} - Tactical suggestion
+        - {"type": "autopilot_audio", "audio": "base64...", "tactic": str} - Auto-pilot response
+        - {"type": "summary", "data": {...}} - Session summary
+        - {"type": "error", "message": str} - Error message
+    """
+
+    if not elevenlabs_voice_agent or not realtime_analyzer:
+        await websocket.close(code=1008, reason="Services not available")
+        return
+
+    await websocket.accept()
+
+    try:
+        # Wait for initial context
+        init_data = await websocket.receive_json()
+
+        if init_data.get("type") != "start":
+            await websocket.send_json({
+                "type": "error",
+                "message": "First message must be {type: 'start', context: {...}}"
+            })
+            await websocket.close()
+            return
+
+        context = init_data.get("context", {})
+
+        # Handle the simulation session
+        await handle_simulation_websocket(
+            websocket=websocket,
+            elevenlabs_agent=elevenlabs_voice_agent,
+            realtime_analyzer=realtime_analyzer,
+            context=context
+        )
+
+    except Exception as e:
+        print(f"❌ WebSocket error: {e}")
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "message": str(e)
+            })
+        except:
+            pass
+        await websocket.close()
+
 
 if __name__ == "__main__":
     import uvicorn

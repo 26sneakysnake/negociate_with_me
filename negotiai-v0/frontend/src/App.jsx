@@ -4,10 +4,11 @@ import PrepPage from './pages/PrepPage';
 import StrategyPage from './pages/StrategyPage';
 import AnalysisPage from './pages/AnalysisPage';
 import HistoryPage from './pages/HistoryPage';
+import SimulationPage from './pages/SimulationPage';
 import './App.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('prep'); // prep, strategy, analysis, history
+  const [currentPage, setCurrentPage] = useState('prep'); // prep, strategy, analysis, history, simulation
   const [sessionData, setSessionData] = useState({
     context: null,
     strategy: null,
@@ -61,6 +62,13 @@ function App() {
         >
           📊 History
         </div>
+        <div
+          className={`step ${currentPage === 'simulation' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('simulation')}
+          style={{ cursor: 'pointer', background: currentPage === 'simulation' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '' }}
+        >
+          🎤 Simulation Live
+        </div>
       </nav>
 
       <main className="app-main">
@@ -87,6 +95,10 @@ function App() {
 
         {currentPage === 'history' && (
           <HistoryPage onNewNegotiation={handleNewNegotiation} />
+        )}
+
+        {currentPage === 'simulation' && (
+          <SimulationPage />
         )}
       </main>
     </div>
