@@ -144,7 +144,7 @@ def init_services():
     except Exception as e:
         print(f"⚠️ ElevenLabs Conversational AI failed to initialize: {e}")
 
-    # Initialize Phone Call Handler (with Twilio)
+    # Initialize Phone Call Handler
     try:
         if settings.ELEVENLABS_API_KEY:
             phone_call_handler = PhoneCallHandler(
@@ -159,6 +159,7 @@ def init_services():
             print("⚠️ Phone Call Handler: No ElevenLabs API key provided")
     except Exception as e:
         print(f"⚠️ Phone Call Handler failed to initialize: {e}")
+
 
 # In-memory session storage (use Redis in production)
 sessions: Dict[str, Session] = {}
