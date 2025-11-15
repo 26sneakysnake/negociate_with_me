@@ -1,0 +1,178 @@
+{
+  "scenarios": [
+    {
+      "name": "SaaS B2B - Plateforme Collaborative",
+      "description": "Scénario recommandé pour une première démo",
+      "data": {
+        "scenario": "saas",
+        "product": "Plateforme de gestion de projet collaborative avec IA",
+        "company_name": "TechCorp Solutions",
+        "target_price": "15000€/an",
+        "minimum_price": "10000€/an",
+        "red_lines": [
+          "Pas de paiement échelonné sur plus de 12 mois",
+          "Support technique inclus obligatoire",
+          "Données hébergées en Europe"
+        ]
+      },
+      "expected_outcome": {
+        "score_range": "70-85/100",
+        "optimal_price": "11500€ - 12500€",
+        "duration": "2-3 minutes",
+        "tactics_to_use": [
+          "Valoriser les fonctionnalités IA uniques",
+          "Proposer un package formation + support",
+          "Négocier par petits incréments"
+        ]
+      }
+    },
+    {
+      "name": "Freelance - Développement Web",
+      "description": "Négociation freelance, plus informelle",
+      "data": {
+        "scenario": "freelance",
+        "product": "Développement complet d'un site e-commerce",
+        "company_name": "BoutiqueMode Paris",
+        "target_price": "12000€",
+        "minimum_price": "8000€",
+        "red_lines": [
+          "Paiement 50% à la signature du contrat",
+          "Code source fourni à la livraison",
+          "Maximum 3 révisions incluses"
+        ]
+      },
+      "expected_outcome": {
+        "score_range": "65-80/100",
+        "optimal_price": "9500€ - 10500€",
+        "duration": "2-3 minutes",
+        "tactics_to_use": [
+          "Mettre en avant votre expertise technique",
+          "Proposer des options de maintenance",
+          "Négocier les révisions vs le prix"
+        ]
+      }
+    },
+    {
+      "name": "Négociation Salariale - Senior Developer",
+      "description": "Négociation d'emploi, côté candidat",
+      "data": {
+        "scenario": "salary",
+        "product": "Poste de Senior Full-Stack Developer",
+        "company_name": "StartupTech Paris",
+        "target_price": "65000€/an",
+        "minimum_price": "55000€/an",
+        "red_lines": [
+          "Package variable minimum 5000€",
+          "Télétravail 3 jours par semaine minimum",
+          "Budget formation 2000€/an"
+        ]
+      },
+      "expected_outcome": {
+        "score_range": "60-75/100",
+        "optimal_price": "58000€ - 62000€ + avantages",
+        "duration": "3-4 minutes",
+        "tactics_to_use": [
+          "Valoriser votre expérience unique",
+          "Demander des avantages non-salariaux",
+          "Négocier une clause de révision à 6 mois"
+        ]
+      }
+    },
+    {
+      "name": "Partenariat B2B - Distribution",
+      "description": "Négociation commerciale stratégique",
+      "data": {
+        "scenario": "partnership",
+        "product": "Contrat de distribution exclusive en France",
+        "company_name": "DistribPlus France",
+        "target_price": "250000€/an + commission 15%",
+        "minimum_price": "180000€/an + commission 10%",
+        "red_lines": [
+          "Exclusivité limitée à 2 ans renouvelable",
+          "Objectif de volume minimum garanti",
+          "Support marketing co-financé"
+        ]
+      },
+      "expected_outcome": {
+        "score_range": "70-85/100",
+        "optimal_price": "200000€ + 12% commission",
+        "duration": "3-4 minutes",
+        "tactics_to_use": [
+          "Parler vision long terme",
+          "Proposer des KPIs partagés",
+          "Négocier exclusivité vs engagement"
+        ]
+      }
+    },
+    {
+      "name": "Immobilier - Achat Appartement",
+      "description": "Négociation immobilière, acheteur",
+      "data": {
+        "scenario": "real_estate",
+        "product": "Appartement 3 pièces - 75m² - Paris 11ème",
+        "company_name": "Agence Immo Paris",
+        "target_price": "450000€",
+        "minimum_price": "400000€",
+        "red_lines": [
+          "Diagnostic électrique à refaire (vendeur)",
+          "Délai de rétractation 10 jours minimum",
+          "Charges copropriété clarifiées"
+        ]
+      },
+      "expected_outcome": {
+        "score_range": "65-80/100",
+        "optimal_price": "420000€ - 430000€",
+        "duration": "3-4 minutes",
+        "tactics_to_use": [
+          "Mentionner les défauts du bien",
+          "Comparer avec d'autres biens similaires",
+          "Négocier les frais d'agence"
+        ]
+      }
+    }
+  ],
+  "tips": {
+    "avant_appel": [
+      "Préparez mentalement 2-3 arguments clés",
+      "Ayez votre prix cible et minimum en tête",
+      "Respirez profondément, soyez calme et confiant",
+      "Notez vos red lines pour ne pas les oublier"
+    ],
+    "pendant_appel": [
+      "Écoutez activement l'agent IA",
+      "N'acceptez pas la première offre",
+      "Utilisez le silence comme arme",
+      "Posez des questions pour gagner du temps",
+      "Négociez par petits incréments",
+      "Proposez des concessions réciproques"
+    ],
+    "apres_appel": [
+      "Lisez attentivement le feedback Mistral",
+      "Identifiez 1-2 points à améliorer",
+      "Refaites le même scénario pour voir votre progression",
+      "Essayez des tactiques que vous n'avez pas utilisées"
+    ]
+  },
+  "scoring_guide": {
+    "90-100": {
+      "label": "Excellent !",
+      "description": "Négociation quasi-parfaite. Vous avez utilisé plusieurs tactiques efficacement et obtenu un excellent résultat."
+    },
+    "70-89": {
+      "label": "Très bien !",
+      "description": "Bonne négociation avec quelques points d'amélioration. Vous êtes sur la bonne voie."
+    },
+    "50-69": {
+      "label": "Correct",
+      "description": "Négociation moyenne. Vous avez obtenu un résultat acceptable mais il y a de la marge de progression."
+    },
+    "30-49": {
+      "label": "Peut mieux faire",
+      "description": "Négociation difficile. Concentrez-vous sur les recommandations Mistral pour progresser."
+    },
+    "0-29": {
+      "label": "À améliorer",
+      "description": "La négociation n'a pas abouti comme souhaité. Réessayez en appliquant les tactiques recommandées."
+    }
+  }
+}
