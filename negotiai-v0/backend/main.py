@@ -1030,6 +1030,105 @@ async def test_webhook():
         "timestamp": json.dumps({"time": "now"})
     }
 
+@app.post("/api/elevenlabs-webhook")
+async def elevenlabs_official_webhook(request: dict):
+    """
+    Endpoint webhook officiel ElevenLabs
+    URL: https://your-ngrok-url.ngrok-free.app/api/elevenlabs-webhook
+
+    ElevenLabs envoie les événements de conversation ici
+    """
+
+    print(f"\n{'='*70}")
+    print(f"📞 ELEVENLABS WEBHOOK RECEIVED")
+    print(f"{'='*70}")
+    print(f"📦 Full payload:")
+    print(json.dumps(request, indent=2, ensure_ascii=False))
+    print(f"{'='*70}\n")
+
+    try:
+        # Extraire les données (ElevenLabs peut envoyer différents formats)
+        agent_id = request.get("agent_id") or request.get("agentId")
+        conversation_id = request.get("conversation_id") or request.get("conversationId")
+
+        # Le transcript peut être à différents endroits
+        transcript = ""
+        if "transcript" in request:
+            transcript = request["transcript"]
+        elif "analysis" in request and "transcript" in request["analysis"]:
+            transcript = request["analysis"]["transcript"]
+        elif "conversation" in request and "transcript" in request["conversation"]:
+            transcript = request["conversation"]["transcript"]
+
+        duration = request.get("duration", 0)
+        status = request.get("status", "completed")
+
+        print(f"🔍 Extracted data:")
+        print(f"   Agent ID: {agent_id}")
+        print(f"   Conversation ID: {conversation_id}")
+        print(f"   Transcript length: {len(transcript)} chars")
+        print(f"   Duration: {duration}s")
+
+        # Trouver la session correspondante
+        session_id = None
+        for sid, session in call_sessions.items():
+            if session.get("agent_config", {}).get("agent_id") == agent_id:
+                session_id = sid
+                break
+
+        if not session_id:
+            print(f"⚠️ No session found for agent_id: {agent_id}")
+            print(f"   Available sessions: {list(call_sessions.keys())}")
+            print(f"   Available agent_ids: {[s.get('agent_config', {}).get('agent_id') for s in call_sessions.values()]}")
+            return {"status": "no_session_found", "message": "Session not found"}
+
+        session = call_sessions[session_id]
+
+        # Stocker le transcript et les métadonnées
+        session["transcript"] = transcript
+        session["duration"] = duration
+        session["conversation_id"] = conversation_id
+        session["call_status"] = status
+        session["status"] = "analyzing"
+
+        print(f"📝 Transcript received for session {session_id}")
+
+        # Analyser avec Mistral si disponible et si transcript non vide
+        if mistral and transcript and len(transcript) > 10:
+            print("🎯 Starting Mistral AI analysis...")
+
+            analysis = await analyze_negotiation_performance(
+                transcript=transcript,
+                user_context=session["context"],
+                mistral_service=mistral
+            )
+
+            session["analysis"] = analysis
+            session["status"] = "completed"
+
+            print(f"✅ Analysis completed")
+            print(f"   Score: {analysis.get('score', 0)}/100")
+            print(f"   Outcome: {analysis.get('outcome', 'unknown')}")
+        else:
+            session["status"] = "completed"
+            if not transcript or len(transcript) <= 10:
+                print("⚠️ Transcript too short or empty - skipping analysis")
+            else:
+                print("⚠️ Mistral not available - skipping analysis")
+
+        return {
+            "status": "success",
+            "message": "Webhook processed",
+            "session_id": session_id
+        }
+
+    except Exception as e:
+        print(f"❌ Webhook error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
 @app.post("/webhook/elevenlabs/call-ended")
 async def elevenlabs_call_ended_webhook(data: dict):
     """

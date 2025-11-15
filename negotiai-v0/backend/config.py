@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     # ElevenLabs Phone Number ID (get from ElevenLabs dashboard)
     ELEVENLABS_AGENT_PHONE_NUMBER_ID: str = ""
 
+    # ElevenLabs Webhook Secret (for signature verification)
+    ELEVENLABS_WEBHOOK_SECRET: str = ""
+
     # Webhook Base URL (for ElevenLabs callbacks)
     # For local dev: http://localhost:8000
     # For production/hackathon: Use ngrok or your deployed backend URL

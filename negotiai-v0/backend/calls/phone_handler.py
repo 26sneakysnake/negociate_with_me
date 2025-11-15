@@ -149,7 +149,7 @@ class PhoneCallHandler:
             print("   Get this from ElevenLabs dashboard → Conversational AI → Phone Numbers")
 
         if webhook_base_url:
-            print(f"✅ Webhook configured: {webhook_base_url}/webhook/elevenlabs/call-ended")
+            print(f"✅ Webhook configured: {webhook_base_url}/api/elevenlabs-webhook")
         else:
             print("⚠️ webhook_base_url not configured - call analytics may not work automatically")
 
@@ -281,10 +281,10 @@ PREMIER MESSAGE À DIRE:
             # Build webhook config if available
             webhook_config = None
             if self.webhook_base_url:
-                webhook_url = f"{self.webhook_base_url}/webhook/elevenlabs/call-ended"
+                webhook_url = f"{self.webhook_base_url}/api/elevenlabs-webhook"
                 webhook_config = {
                     "url": webhook_url,
-                    "events": ["conversation.ended"]  # ElevenLabs uses "conversation.ended" not "call.ended"
+                    "events": ["conversation.ended"]  # ElevenLabs uses "conversation.ended"
                 }
                 print(f"📡 Webhook configured: {webhook_url}")
 
