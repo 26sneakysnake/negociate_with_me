@@ -278,7 +278,17 @@ PREMIER MESSAGE À DIRE:
 
         # Create ElevenLabs Conversational AI agent via REST API
         try:
-            # Build payload
+            # Build webhook config if available
+            webhook_config = None
+            if self.webhook_base_url:
+                webhook_url = f"{self.webhook_base_url}/webhook/elevenlabs/call-ended"
+                webhook_config = {
+                    "url": webhook_url,
+                    "events": ["conversation.ended"]  # ElevenLabs uses "conversation.ended" not "call.ended"
+                }
+                print(f"📡 Webhook configured: {webhook_url}")
+
+            # Build payload - webhook must be INSIDE conversation_config
             payload = {
                 "conversation_config": {
                     "agent": {
@@ -295,14 +305,9 @@ PREMIER MESSAGE À DIRE:
                 }
             }
 
-            # Add webhook configuration if available
-            if self.webhook_base_url:
-                webhook_url = f"{self.webhook_base_url}/webhook/elevenlabs/call-ended"
-                payload["webhook"] = {
-                    "url": webhook_url,
-                    "events": ["call.ended"]
-                }
-                print(f"📡 Webhook configured: {webhook_url}")
+            # Add webhook to conversation_config (not at root level!)
+            if webhook_config:
+                payload["conversation_config"]["webhook"] = webhook_config
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(

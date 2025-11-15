@@ -964,92 +964,6 @@ async def call_status_callback(
     return {"status": "received"}
 
 
-@app.post("/webhook/elevenlabs/call-ended")
-async def call_ended_webhook(webhook_data: dict):
-    """
-    Webhook endpoint for ElevenLabs Conversational AI to send transcript
-
-    Expected webhook payload from ElevenLabs:
-    {
-        "agent_id": str,
-        "conversation_id": str,
-        "transcript": str,  # Full conversation transcript
-        "analysis": {...},  # Optional ElevenLabs analysis
-        "metadata": {...}   # Additional metadata
-    }
-
-    This webhook will:
-    1. Find the corresponding session by agent_id
-    2. Analyze the call with Mistral AI
-    3. Store results for later retrieval
-    """
-
-    if not mistral or not phone_call_handler:
-        return {"error": "Required services not available"}
-
-    print(f"📞 ElevenLabs webhook received:")
-    print(f"   Payload keys: {list(webhook_data.keys())}")
-
-    try:
-        # ElevenLabs may send different formats - try to extract what we need
-        agent_id = webhook_data.get("agent_id")
-        conversation_id = webhook_data.get("conversation_id")
-        transcript = webhook_data.get("transcript") or webhook_data.get("conversation_transcript")
-        metadata = webhook_data.get("metadata", {})
-        duration = metadata.get("duration") or webhook_data.get("duration")
-
-        # Find session by agent_id
-        session = None
-        for s in call_sessions.values():
-            session_agent_id = s.get("agent_config", {}).get("agent_id")
-            if session_agent_id == agent_id:
-                session = s
-                break
-
-        if not session:
-            print(f"⚠️ Webhook received for unknown agent_id: {agent_id}")
-            return {"error": "Session not found", "agent_id": agent_id}
-
-        if not transcript:
-            print(f"⚠️ Webhook received without transcript")
-            return {"error": "No transcript provided"}
-
-        print(f"📞 Processing call transcript")
-        print(f"   Agent ID: {agent_id}")
-        print(f"   Conversation ID: {conversation_id}")
-        print(f"   Duration: {duration}s" if duration else "   Duration: unknown")
-        print(f"   Transcript length: {len(transcript)} chars")
-
-        # Analyze call performance with Mistral
-        analysis = await phone_call_handler.analyze_call(
-            transcript=transcript,
-            scenario_type=session["scenario"],
-            user_context=session["context"],
-            mistral_service=mistral
-        )
-
-        # Update session with results
-        session["transcript"] = transcript
-        session["duration"] = duration
-        session["conversation_id"] = conversation_id
-        session["analysis"] = analysis
-        session["status"] = "completed"
-
-        print(f"✅ Call analysis completed")
-        print(f"   Score: {analysis['scores']['global']}/10")
-
-        return {
-            "status": "analyzed",
-            "score": analysis['scores']['global']
-        }
-
-    except Exception as e:
-        print(f"❌ Webhook error: {e}")
-        import traceback
-        traceback.print_exc()
-        return {"error": str(e)}
-
-
 @app.get("/api/call/results/{session_id}")
 async def get_call_results(session_id: str):
     """
@@ -1102,37 +1016,59 @@ async def delete_call_session(session_id: str):
 # WEBHOOK ENDPOINTS (ElevenLabs Callbacks)
 # ============================================================================
 
+@app.get("/webhook/test")
+@app.post("/webhook/test")
+async def test_webhook():
+    """
+    Endpoint de test pour vérifier que le webhook est accessible
+    Utilisez ceci pour tester que ngrok fonctionne:
+    curl https://your-ngrok-url.ngrok-free.app/webhook/test
+    """
+    return {
+        "status": "ok",
+        "message": "Webhook endpoint is accessible!",
+        "timestamp": json.dumps({"time": "now"})
+    }
+
 @app.post("/webhook/elevenlabs/call-ended")
 async def elevenlabs_call_ended_webhook(data: dict):
     """
-    Webhook appelé par ElevenLabs quand un appel se termine
+    Webhook appelé par ElevenLabs quand une conversation se termine
 
-    ElevenLabs envoie:
-    {
-        "call_id": str,
-        "agent_id": str,
-        "duration": int,
-        "transcript": str,
-        "status": "completed" | "failed",
-        "metadata": {...}
-    }
+    ElevenLabs peut envoyer différents formats selon le type d'événement.
+    On log tout pour débugger.
     """
 
     print(f"\n{'='*70}")
-    print(f"📞 WEBHOOK: Call ended")
+    print(f"📞 WEBHOOK RECEIVED: ElevenLabs Call Ended")
     print(f"{'='*70}")
-    print(f"   Call ID: {data.get('call_id')}")
-    print(f"   Agent ID: {data.get('agent_id')}")
-    print(f"   Status: {data.get('status')}")
-    print(f"   Duration: {data.get('duration')}s")
+    print(f"📦 Full payload received:")
+    print(json.dumps(data, indent=2, ensure_ascii=False))
     print(f"{'='*70}\n")
 
     try:
-        call_id = data.get("call_id")
-        agent_id = data.get("agent_id")
-        transcript = data.get("transcript", "")
+        # ElevenLabs peut envoyer différents formats
+        # Essayer plusieurs clés possibles
+        call_id = data.get("call_id") or data.get("conversation_id")
+        agent_id = data.get("agent_id") or data.get("agentId")
+
+        # Le transcript peut être dans différents endroits
+        transcript = ""
+        if "transcript" in data:
+            transcript = data["transcript"]
+        elif "analysis" in data and "transcript" in data["analysis"]:
+            transcript = data["analysis"]["transcript"]
+        elif "metadata" in data and "transcript" in data["metadata"]:
+            transcript = data["metadata"]["transcript"]
+
         duration = data.get("duration", 0)
         status = data.get("status", "unknown")
+
+        print(f"🔍 Extracted data:")
+        print(f"   Agent ID: {agent_id}")
+        print(f"   Call ID: {call_id}")
+        print(f"   Transcript length: {len(transcript)} chars")
+        print(f"   Duration: {duration}s")
 
         # Find session by agent_id
         session_id = None
@@ -1143,6 +1079,8 @@ async def elevenlabs_call_ended_webhook(data: dict):
 
         if not session_id:
             print(f"⚠️ No session found for agent_id: {agent_id}")
+            print(f"   Available sessions: {list(call_sessions.keys())}")
+            print(f"   Available agent_ids: {[s.get('agent_config', {}).get('agent_id') for s in call_sessions.values()]}")
             return {"status": "no_session_found", "message": "Session not found for this agent"}
 
         session = call_sessions[session_id]
