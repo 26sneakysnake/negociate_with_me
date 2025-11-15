@@ -135,16 +135,23 @@ class PhoneCallHandler:
     def __init__(
         self,
         elevenlabs_api_key: str,
-        agent_phone_number_id: str = None
+        agent_phone_number_id: str = None,
+        webhook_base_url: str = None
     ):
         self.client = ElevenLabs(api_key=elevenlabs_api_key)
         self.elevenlabs_api_key = elevenlabs_api_key
         self.agent_phone_number_id = agent_phone_number_id
+        self.webhook_base_url = webhook_base_url
         self.api_base_url = "https://api.elevenlabs.io/v1"
 
         if not agent_phone_number_id:
             print("⚠️ agent_phone_number_id not configured - phone calls may not work")
             print("   Get this from ElevenLabs dashboard → Conversational AI → Phone Numbers")
+
+        if webhook_base_url:
+            print(f"✅ Webhook configured: {webhook_base_url}/webhook/elevenlabs/call-ended")
+        else:
+            print("⚠️ webhook_base_url not configured - call analytics may not work automatically")
 
     async def create_agent(
         self,
@@ -271,6 +278,32 @@ PREMIER MESSAGE À DIRE:
 
         # Create ElevenLabs Conversational AI agent via REST API
         try:
+            # Build payload
+            payload = {
+                "conversation_config": {
+                    "agent": {
+                        "prompt": {
+                            "prompt": full_prompt
+                        },
+                        "first_message": scenario['first_message'],
+                        "language": "fr"
+                    },
+                    "tts": {
+                        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+                        "model_id": "eleven_turbo_v2_5"
+                    }
+                }
+            }
+
+            # Add webhook configuration if available
+            if self.webhook_base_url:
+                webhook_url = f"{self.webhook_base_url}/webhook/elevenlabs/call-ended"
+                payload["webhook"] = {
+                    "url": webhook_url,
+                    "events": ["call.ended"]
+                }
+                print(f"📡 Webhook configured: {webhook_url}")
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.api_base_url}/convai/agents/create",
@@ -278,21 +311,7 @@ PREMIER MESSAGE À DIRE:
                         "xi-api-key": self.elevenlabs_api_key,
                         "Content-Type": "application/json"
                     },
-                    json={
-                        "conversation_config": {
-                            "agent": {
-                                "prompt": {
-                                    "prompt": full_prompt
-                                },
-                                "first_message": scenario['first_message'],
-                                "language": "fr"
-                            },
-                            "tts": {
-                                "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
-                                "model_id": "eleven_turbo_v2_5"
-                            }
-                        }
-                    },
+                    json=payload,
                     timeout=30.0
                 )
 

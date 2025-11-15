@@ -35,7 +35,7 @@ function Step4Briefing({ sessionData, updateSessionData, goToStep }) {
     };
 
     fetchAnalysis();
-  }, [sessionData.session_id]);
+  }, [sessionData.session_id, updateSessionData]);
 
   if (loading) {
     return (

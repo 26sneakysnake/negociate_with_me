@@ -150,7 +150,8 @@ def init_services():
         if settings.ELEVENLABS_API_KEY:
             phone_call_handler = PhoneCallHandler(
                 elevenlabs_api_key=settings.ELEVENLABS_API_KEY,
-                agent_phone_number_id=settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID if settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID else None
+                agent_phone_number_id=settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID if settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID else None,
+                webhook_base_url=settings.WEBHOOK_BASE_URL if hasattr(settings, 'WEBHOOK_BASE_URL') else None
             )
             if settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID:
                 print("✅ Phone Call Handler initialized (with phone number)")

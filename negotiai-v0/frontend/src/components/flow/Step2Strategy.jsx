@@ -2,7 +2,7 @@ import React from 'react';
 import './Step2Strategy.css';
 
 function Step2Strategy({ sessionData, goToStep }) {
-  const { research_data, context, scenario } = sessionData;
+  const { research_data, context } = sessionData;
 
   return (
     <div className="step2-strategy">
