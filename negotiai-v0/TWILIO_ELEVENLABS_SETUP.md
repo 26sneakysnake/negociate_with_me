@@ -1,4 +1,40 @@
-# 🔧 Configuration Twilio + ElevenLabs pour Appels Téléphoniques
+# ⚠️ GUIDE OBSOLÈTE - Voir PHONE_CALL_SETUP.md
+
+**Ce guide est obsolète** depuis la refonte de l'architecture des appels téléphoniques.
+
+## 📖 Nouveau Guide
+
+**Utilisez le nouveau guide** : [PHONE_CALL_SETUP.md](./PHONE_CALL_SETUP.md)
+
+## Pourquoi ce changement ?
+
+L'implémentation précédente était complexe :
+- Nécessitait des credentials Twilio séparés
+- Nécessitait une URL publique (ngrok)
+- Nécessitait la configuration de webhooks
+- Nécessitait la génération de TwiML
+
+**Nouvelle approche simplifiée** :
+- Utilise l'API native d'ElevenLabs
+- ElevenLabs gère Twilio automatiquement
+- Plus besoin de ngrok ou URL publique
+- Plus besoin de webhooks ou TwiML
+- Configuration en 2 variables d'environnement seulement
+
+## Configuration Rapide
+
+```env
+ELEVENLABS_API_KEY=sk_your_key
+ELEVENLABS_AGENT_PHONE_NUMBER_ID=phnum_your_id
+```
+
+Voir [PHONE_CALL_SETUP.md](./PHONE_CALL_SETUP.md) pour les instructions complètes.
+
+---
+
+# 🔧 Configuration Twilio + ElevenLabs pour Appels Téléphoniques (OBSOLÈTE)
+
+**⚠️ Ce guide est conservé pour référence historique uniquement.**
 
 Ce guide explique comment configurer les appels téléphoniques réels avec Twilio + ElevenLabs Conversational AI.
 
