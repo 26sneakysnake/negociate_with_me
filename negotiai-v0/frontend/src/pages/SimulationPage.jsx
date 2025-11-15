@@ -79,6 +79,19 @@ export default function SimulationPage({ onBack }) {
 
   const currentScenario = scenarios[scenarioType];
 
+  // Helper function to safely render values (handle objects from Mistral AI)
+  const renderValue = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      // If it's an object, try to extract meaningful info or stringify it
+      if (value.range && value.basis) {
+        return `${value.range} (${value.basis})`;
+      }
+      return JSON.stringify(value);
+    }
+    return value;
+  };
+
   // Handle research
   const handleResearch = async () => {
     if (!productName.trim()) {
@@ -182,17 +195,21 @@ export default function SimulationPage({ onBack }) {
 
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>💰 Prix marché typique</h3>
-            <p style={{ margin: 0, color: '#666' }}>{researchData.product.typical_pricing}</p>
+            <p style={{ margin: 0, color: '#666' }}>{renderValue(researchData.product.typical_pricing)}</p>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>🏆 Concurrents principaux</h3>
-            <p style={{ margin: 0, color: '#666' }}>{researchData.product.competitors.join(', ')}</p>
+            <p style={{ margin: 0, color: '#666' }}>
+              {Array.isArray(researchData.product.competitors)
+                ? researchData.product.competitors.join(', ')
+                : renderValue(researchData.product.competitors)}
+            </p>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>📊 Position marché</h3>
-            <p style={{ margin: 0, color: '#666' }}>{researchData.product.market_position}</p>
+            <p style={{ margin: 0, color: '#666' }}>{renderValue(researchData.product.market_position)}</p>
           </div>
 
           <div>
@@ -214,18 +231,18 @@ export default function SimulationPage({ onBack }) {
             padding: '24px',
             marginBottom: '24px'
           }}>
-            <h2 style={{ marginTop: 0 }}>🏢 Client: {researchData.client.name}</h2>
+            <h2 style={{ marginTop: 0 }}>🏢 Client: {renderValue(researchData.client.name)}</h2>
 
             <div style={{ marginBottom: '12px' }}>
-              <strong>Taille:</strong> {researchData.client.company_size}
+              <strong>Taille:</strong> {renderValue(researchData.client.company_size)}
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <strong>Secteur:</strong> {researchData.client.industry}
+              <strong>Secteur:</strong> {renderValue(researchData.client.industry)}
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <strong>Budget estimé:</strong> {researchData.client.budget_range}
+              <strong>Budget estimé:</strong> {renderValue(researchData.client.budget_range)}
             </div>
 
             <div style={{ marginBottom: '12px' }}>
