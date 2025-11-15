@@ -3,7 +3,7 @@ ElevenLabs Conversational AI Phone Call Handler
 Uses ElevenLabs built-in Twilio integration for phone calls
 """
 
-from elevenlabs import ElevenLabs
+from elevenlabs.client import ElevenLabs
 import json
 from typing import Dict
 from services.mistral_service import MistralService
