@@ -144,11 +144,20 @@ def init_services():
     except Exception as e:
         print(f"⚠️ ElevenLabs Conversational AI failed to initialize: {e}")
 
-    # Initialize Phone Call Handler
+    # Initialize Phone Call Handler (with Twilio)
     try:
         if settings.ELEVENLABS_API_KEY:
-            phone_call_handler = PhoneCallHandler(api_key=settings.ELEVENLABS_API_KEY)
-            print("✅ Phone Call Handler initialized")
+            phone_call_handler = PhoneCallHandler(
+                elevenlabs_api_key=settings.ELEVENLABS_API_KEY,
+                twilio_account_sid=settings.TWILIO_ACCOUNT_SID if settings.TWILIO_ACCOUNT_SID else None,
+                twilio_auth_token=settings.TWILIO_AUTH_TOKEN if settings.TWILIO_AUTH_TOKEN else None,
+                twilio_phone_number=settings.TWILIO_PHONE_NUMBER if settings.TWILIO_PHONE_NUMBER else None,
+                public_url=settings.PUBLIC_URL
+            )
+            if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
+                print("✅ Phone Call Handler initialized (with Twilio)")
+            else:
+                print("✅ Phone Call Handler initialized (without Twilio - phone calls disabled)")
         else:
             print("⚠️ Phone Call Handler: No ElevenLabs API key provided")
     except Exception as e:
@@ -715,32 +724,48 @@ async def start_call(session_id: str, phone_data: dict):
         if not phone_number:
             raise HTTPException(status_code=400, detail="phone_number is required")
 
-        # Attempt to initiate call
+        # Get agent_id from session
+        agent_id = session["agent_config"].get("agent_id")
+
+        if not agent_id:
+            # If agent creation failed, return error
+            error = session["agent_config"].get("error")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Agent not available: {error if error else 'Agent ID missing'}"
+            )
+
+        # Attempt to initiate call via Twilio
         call_result = await phone_call_handler.initiate_call(
             phone_number=phone_number,
-            agent_config=session["agent_config"]
+            agent_id=agent_id
         )
 
         if call_result["status"] == "initiated":
             # Update session
-            session["call_id"] = call_result["call_id"]
+            session["call_sid"] = call_result["call_sid"]
             session["phone_number"] = phone_number
             session["status"] = "in_progress"
 
             return {
-                "call_id": call_result["call_id"],
+                "call_sid": call_result["call_sid"],
                 "status": "initiated",
-                "message": "Call initiated successfully. You will receive the call in ~10 seconds.",
-                "estimated_start": call_result.get("estimated_start", "10 seconds")
+                "message": call_result["message"]
             }
-        else:
-            # Phone API not available - return alternatives
+        elif call_result["status"] == "unavailable":
+            # Twilio not configured
             return {
                 "status": "unavailable",
-                "message": "ElevenLabs Phone API is not available yet",
+                "message": "Twilio n'est pas configuré. Les appels téléphoniques ne sont pas disponibles.",
                 "error": call_result.get("error"),
-                "alternatives": call_result.get("alternatives"),
-                "suggestion": "For now, use TEXT mode for fully functional negotiation training"
+                "suggestion": "Veuillez configurer Twilio dans le fichier .env (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)"
+            }
+        else:
+            # Error occurred
+            return {
+                "status": "error",
+                "message": call_result.get("message"),
+                "error": call_result.get("error")
             }
 
     except HTTPException:
@@ -749,21 +774,88 @@ async def start_call(session_id: str, phone_data: dict):
         raise HTTPException(status_code=500, detail=f"Error starting call: {str(e)}")
 
 
+@app.get("/api/call/twiml/{agent_id}")
+@app.post("/api/call/twiml/{agent_id}")
+async def get_twiml(agent_id: str):
+    """
+    TwiML endpoint for Twilio to connect call to ElevenLabs WebSocket
+
+    Twilio calls this when user answers the phone.
+    Returns XML instructions to stream audio to/from ElevenLabs.
+    """
+
+    if not phone_call_handler:
+        raise HTTPException(status_code=503, detail="Phone Call Handler not available")
+
+    try:
+        from fastapi.responses import Response
+
+        # Generate TwiML
+        twiml = phone_call_handler.generate_twiml(agent_id)
+
+        print(f"📞 Serving TwiML for agent: {agent_id}")
+
+        # Return XML response
+        return Response(content=twiml, media_type="application/xml")
+
+    except Exception as e:
+        print(f"❌ TwiML generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"TwiML error: {str(e)}")
+
+
+@app.post("/api/call/status")
+async def call_status_callback(
+    CallSid: str = None,
+    CallStatus: str = None,
+    From: str = None,
+    To: str = None
+):
+    """
+    Twilio status callback endpoint
+
+    Receives updates about call status (initiated, ringing, answered, completed)
+    """
+
+    print(f"📞 Twilio status callback:")
+    print(f"   Call SID: {CallSid}")
+    print(f"   Status: {CallStatus}")
+    print(f"   From: {From}")
+    print(f"   To: {To}")
+
+    # Find session by call_sid
+    session = next(
+        (s for s in call_sessions.values() if s.get("call_sid") == CallSid),
+        None
+    )
+
+    if session:
+        # Update session status
+        if CallStatus == "completed":
+            session["status"] = "waiting_analysis"
+            print(f"   Session updated: waiting for transcript")
+        elif CallStatus in ["failed", "busy", "no-answer"]:
+            session["status"] = "failed"
+            print(f"   Call failed: {CallStatus}")
+
+    return {"status": "received"}
+
+
 @app.post("/webhook/elevenlabs/call-ended")
 async def call_ended_webhook(webhook_data: dict):
     """
-    Webhook endpoint for ElevenLabs to notify when call ends
+    Webhook endpoint for ElevenLabs Conversational AI to send transcript
 
     Expected webhook payload from ElevenLabs:
     {
-        "call_id": str,
-        "transcript": str,
-        "duration": int (seconds),
-        "recording_url": str (optional)
+        "agent_id": str,
+        "conversation_id": str,
+        "transcript": str,  # Full conversation transcript
+        "analysis": {...},  # Optional ElevenLabs analysis
+        "metadata": {...}   # Additional metadata
     }
 
     This webhook will:
-    1. Find the corresponding session
+    1. Find the corresponding session by agent_id
     2. Analyze the call with Mistral AI
     3. Store results for later retrieval
     """
@@ -771,25 +863,37 @@ async def call_ended_webhook(webhook_data: dict):
     if not mistral or not phone_call_handler:
         return {"error": "Required services not available"}
 
-    try:
-        call_id = webhook_data.get("call_id")
-        transcript = webhook_data.get("transcript")
-        duration = webhook_data.get("duration")
-        recording_url = webhook_data.get("recording_url")
+    print(f"📞 ElevenLabs webhook received:")
+    print(f"   Payload keys: {list(webhook_data.keys())}")
 
-        # Find session by call_id
-        session = next(
-            (s for s in call_sessions.values() if s.get("call_id") == call_id),
-            None
-        )
+    try:
+        # ElevenLabs may send different formats - try to extract what we need
+        agent_id = webhook_data.get("agent_id")
+        conversation_id = webhook_data.get("conversation_id")
+        transcript = webhook_data.get("transcript") or webhook_data.get("conversation_transcript")
+        metadata = webhook_data.get("metadata", {})
+        duration = metadata.get("duration") or webhook_data.get("duration")
+
+        # Find session by agent_id
+        session = None
+        for s in call_sessions.values():
+            session_agent_id = s.get("agent_config", {}).get("agent_id")
+            if session_agent_id == agent_id:
+                session = s
+                break
 
         if not session:
-            print(f"⚠️ Webhook received for unknown call_id: {call_id}")
-            return {"error": "Session not found"}
+            print(f"⚠️ Webhook received for unknown agent_id: {agent_id}")
+            return {"error": "Session not found", "agent_id": agent_id}
 
-        print(f"📞 Call ended webhook received")
-        print(f"   Call ID: {call_id}")
-        print(f"   Duration: {duration}s")
+        if not transcript:
+            print(f"⚠️ Webhook received without transcript")
+            return {"error": "No transcript provided"}
+
+        print(f"📞 Processing call transcript")
+        print(f"   Agent ID: {agent_id}")
+        print(f"   Conversation ID: {conversation_id}")
+        print(f"   Duration: {duration}s" if duration else "   Duration: unknown")
         print(f"   Transcript length: {len(transcript)} chars")
 
         # Analyze call performance with Mistral
@@ -803,7 +907,7 @@ async def call_ended_webhook(webhook_data: dict):
         # Update session with results
         session["transcript"] = transcript
         session["duration"] = duration
-        session["recording_url"] = recording_url
+        session["conversation_id"] = conversation_id
         session["analysis"] = analysis
         session["status"] = "completed"
 
@@ -817,6 +921,8 @@ async def call_ended_webhook(webhook_data: dict):
 
     except Exception as e:
         print(f"❌ Webhook error: {e}")
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 
