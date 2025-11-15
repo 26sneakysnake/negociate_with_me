@@ -26,6 +26,8 @@ from ai.realtime_analyzer import RealtimeAnalyzer
 from websocket_handler import handle_simulation_websocket
 from services.web_research_service import WebResearchService
 from services.elevenlabs_agent_service import ElevenLabsConversationalAgent
+from calls.phone_handler import PhoneCallHandler, get_available_scenarios
+import uuid
 
 # Initialize FastAPI
 app = FastAPI(title="NegotiAI v0")
@@ -56,10 +58,14 @@ elevenlabs_voice_agent = None
 realtime_analyzer = None
 web_research_service = None
 elevenlabs_conversational_agent = None
+phone_call_handler = None
+
+# In-memory storage for phone call sessions (use Redis in production)
+call_sessions: Dict[str, Dict] = {}
 
 def init_services():
     """Initialize services with error handling"""
-    global mistral, qdrant, elevenlabs, elevenlabs_voice_agent, realtime_analyzer, web_research_service, elevenlabs_conversational_agent
+    global mistral, qdrant, elevenlabs, elevenlabs_voice_agent, realtime_analyzer, web_research_service, elevenlabs_conversational_agent, phone_call_handler
     try:
         mistral = MistralService()
         print("✅ Mistral service initialized")
@@ -137,6 +143,16 @@ def init_services():
         print(f"{'='*70}\n")
     except Exception as e:
         print(f"⚠️ ElevenLabs Conversational AI failed to initialize: {e}")
+
+    # Initialize Phone Call Handler
+    try:
+        if settings.ELEVENLABS_API_KEY:
+            phone_call_handler = PhoneCallHandler(api_key=settings.ELEVENLABS_API_KEY)
+            print("✅ Phone Call Handler initialized")
+        else:
+            print("⚠️ Phone Call Handler: No ElevenLabs API key provided")
+    except Exception as e:
+        print(f"⚠️ Phone Call Handler failed to initialize: {e}")
 
 # In-memory session storage (use Redis in production)
 sessions: Dict[str, Session] = {}
@@ -566,6 +582,290 @@ async def simulation_websocket(websocket: WebSocket):
         except:
             pass
         await websocket.close()
+
+
+# ============================================================================
+# PHONE CALL ENDPOINTS (NEW - Real phone calls with ElevenLabs)
+# ============================================================================
+
+@app.get("/api/call/scenarios")
+async def get_scenarios():
+    """
+    Get available negotiation scenarios for phone calls
+
+    Returns:
+        {
+            "saas": {"name": "...", "description": "..."},
+            "freelance": {...},
+            ...
+        }
+    """
+    return get_available_scenarios()
+
+
+@app.post("/api/call/setup")
+async def setup_call(data: dict):
+    """
+    Setup phone call session with AI negotiation opponent
+
+    Request body:
+    {
+        "scenario": "saas" | "freelance" | "salary" | "partnership" | "real_estate",
+        "context": {
+            "product": str,
+            "target_price": str,
+            "minimum_price": str,
+            "red_lines": List[str],
+            ...
+        }
+    }
+
+    Returns:
+        {
+            "session_id": str,
+            "scenario": str,
+            "ready": bool
+        }
+    """
+
+    if not phone_call_handler:
+        raise HTTPException(
+            status_code=503,
+            detail="Phone Call Handler not available. Check ElevenLabs API key configuration."
+        )
+
+    try:
+        scenario_type = data.get("scenario")
+        user_context = data.get("context", {})
+
+        if not scenario_type:
+            raise HTTPException(status_code=400, detail="scenario is required")
+
+        # Create agent configuration for this scenario
+        agent_config = await phone_call_handler.create_agent(
+            scenario_type=scenario_type,
+            user_context=user_context
+        )
+
+        # Generate session ID
+        session_id = str(uuid.uuid4())
+
+        # Store session
+        call_sessions[session_id] = {
+            "agent_config": agent_config,
+            "scenario": scenario_type,
+            "context": user_context,
+            "status": "ready",
+            "created_at": str(uuid.uuid1())
+        }
+
+        print(f"✅ Call session created: {session_id}")
+        print(f"   Scenario: {agent_config['scenario_name']}")
+
+        return {
+            "session_id": session_id,
+            "scenario": agent_config['scenario_name'],
+            "ready": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error setting up call: {str(e)}")
+
+
+@app.post("/api/call/start/{session_id}")
+async def start_call(session_id: str, phone_data: dict):
+    """
+    Start phone call to user's number
+
+    Request body:
+    {
+        "phone_number": "+33612345678"
+    }
+
+    Returns:
+        {
+            "call_id": str (if successful),
+            "status": "initiated" | "unavailable",
+            "message": str,
+            "alternatives": {...} (if unavailable)
+        }
+    """
+
+    if not phone_call_handler:
+        raise HTTPException(
+            status_code=503,
+            detail="Phone Call Handler not available"
+        )
+
+    # Get session
+    session = call_sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session["status"] != "ready":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Session not ready (current status: {session['status']})"
+        )
+
+    try:
+        phone_number = phone_data.get("phone_number")
+        if not phone_number:
+            raise HTTPException(status_code=400, detail="phone_number is required")
+
+        # Attempt to initiate call
+        call_result = await phone_call_handler.initiate_call(
+            phone_number=phone_number,
+            agent_config=session["agent_config"]
+        )
+
+        if call_result["status"] == "initiated":
+            # Update session
+            session["call_id"] = call_result["call_id"]
+            session["phone_number"] = phone_number
+            session["status"] = "in_progress"
+
+            return {
+                "call_id": call_result["call_id"],
+                "status": "initiated",
+                "message": "Call initiated successfully. You will receive the call in ~10 seconds.",
+                "estimated_start": call_result.get("estimated_start", "10 seconds")
+            }
+        else:
+            # Phone API not available - return alternatives
+            return {
+                "status": "unavailable",
+                "message": "ElevenLabs Phone API is not available yet",
+                "error": call_result.get("error"),
+                "alternatives": call_result.get("alternatives"),
+                "suggestion": "For now, use TEXT mode for fully functional negotiation training"
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error starting call: {str(e)}")
+
+
+@app.post("/webhook/elevenlabs/call-ended")
+async def call_ended_webhook(webhook_data: dict):
+    """
+    Webhook endpoint for ElevenLabs to notify when call ends
+
+    Expected webhook payload from ElevenLabs:
+    {
+        "call_id": str,
+        "transcript": str,
+        "duration": int (seconds),
+        "recording_url": str (optional)
+    }
+
+    This webhook will:
+    1. Find the corresponding session
+    2. Analyze the call with Mistral AI
+    3. Store results for later retrieval
+    """
+
+    if not mistral or not phone_call_handler:
+        return {"error": "Required services not available"}
+
+    try:
+        call_id = webhook_data.get("call_id")
+        transcript = webhook_data.get("transcript")
+        duration = webhook_data.get("duration")
+        recording_url = webhook_data.get("recording_url")
+
+        # Find session by call_id
+        session = next(
+            (s for s in call_sessions.values() if s.get("call_id") == call_id),
+            None
+        )
+
+        if not session:
+            print(f"⚠️ Webhook received for unknown call_id: {call_id}")
+            return {"error": "Session not found"}
+
+        print(f"📞 Call ended webhook received")
+        print(f"   Call ID: {call_id}")
+        print(f"   Duration: {duration}s")
+        print(f"   Transcript length: {len(transcript)} chars")
+
+        # Analyze call performance with Mistral
+        analysis = await phone_call_handler.analyze_call(
+            transcript=transcript,
+            scenario_type=session["scenario"],
+            user_context=session["context"],
+            mistral_service=mistral
+        )
+
+        # Update session with results
+        session["transcript"] = transcript
+        session["duration"] = duration
+        session["recording_url"] = recording_url
+        session["analysis"] = analysis
+        session["status"] = "completed"
+
+        print(f"✅ Call analysis completed")
+        print(f"   Score: {analysis['scores']['global']}/10")
+
+        return {
+            "status": "analyzed",
+            "score": analysis['scores']['global']
+        }
+
+    except Exception as e:
+        print(f"❌ Webhook error: {e}")
+        return {"error": str(e)}
+
+
+@app.get("/api/call/results/{session_id}")
+async def get_call_results(session_id: str):
+    """
+    Get analysis results for a completed call
+
+    Returns:
+        {
+            "status": "ready" | "in_progress" | "completed" | "not_found",
+            "transcript": str (if completed),
+            "duration": int (if completed),
+            "recording_url": str (if available),
+            "analysis": {...} (if completed)
+        }
+    """
+
+    session = call_sessions.get(session_id)
+
+    if not session:
+        return {"status": "not_found"}
+
+    if session["status"] != "completed":
+        return {
+            "status": session["status"],
+            "message": f"Call is {session['status']}"
+        }
+
+    return {
+        "status": "completed",
+        "transcript": session.get("transcript"),
+        "duration": session.get("duration"),
+        "recording_url": session.get("recording_url"),
+        "analysis": session.get("analysis"),
+        "scenario": session["scenario"],
+        "context": session["context"]
+    }
+
+
+@app.delete("/api/call/session/{session_id}")
+async def delete_call_session(session_id: str):
+    """Delete a call session"""
+
+    if session_id in call_sessions:
+        del call_sessions[session_id]
+        return {"status": "deleted"}
+
+    return {"status": "not_found"}
 
 
 if __name__ == "__main__":

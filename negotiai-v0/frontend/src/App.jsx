@@ -5,10 +5,11 @@ import StrategyPage from './pages/StrategyPage';
 import AnalysisPage from './pages/AnalysisPage';
 import HistoryPage from './pages/HistoryPage';
 import SimulationPage from './pages/SimulationPage';
+import PhoneCallPage from './pages/PhoneCallPage';
 import './App.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('prep'); // prep, strategy, analysis, history, simulation
+  const [currentPage, setCurrentPage] = useState('prep'); // prep, strategy, analysis, history, simulation, phone
   const [sessionData, setSessionData] = useState({
     context: null,
     strategy: null,
@@ -69,6 +70,13 @@ function App() {
         >
           🎤 Simulation Live
         </div>
+        <div
+          className={`step ${currentPage === 'phone' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('phone')}
+          style={{ cursor: 'pointer', background: currentPage === 'phone' ? 'linear-gradient(135deg, #f44336 0%, #e91e63 100%)' : '' }}
+        >
+          📞 Appel Téléphone
+        </div>
       </nav>
 
       <main className="app-main">
@@ -99,6 +107,10 @@ function App() {
 
         {currentPage === 'simulation' && (
           <SimulationPage onBack={() => setCurrentPage('prep')} />
+        )}
+
+        {currentPage === 'phone' && (
+          <PhoneCallPage />
         )}
       </main>
     </div>
