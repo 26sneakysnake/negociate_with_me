@@ -290,50 +290,35 @@ PREMIER MESSAGE À DIRE:
         print(f"   Phone Number ID: {self.agent_phone_number_id}")
 
         try:
-            # Use ElevenLabs REST API for outbound Twilio call
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.api_base_url}/convai/agents/{agent_id}/outbound_call",
-                    headers={
-                        "xi-api-key": self.elevenlabs_api_key,
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "agent_phone_number_id": self.agent_phone_number_id,
-                        "to_number": phone_number
-                    },
-                    timeout=30.0
-                )
+            # Use ElevenLabs SDK's built-in Twilio integration
+            # This is the WORKING code from the user
+            response = self.client.conversational_ai.twilio.outbound_call(
+                agent_id=agent_id,
+                agent_phone_number_id=self.agent_phone_number_id,
+                to_number=phone_number
+            )
 
-                if response.status_code == 200:
-                    result = response.json()
-                    call_id = result.get("call_id", "unknown")
+            print(f"✅ Call initiated via ElevenLabs SDK")
+            print(f"   Response: {response}")
 
-                    print(f"✅ Call initiated via ElevenLabs")
-                    print(f"   Call ID: {call_id}")
-                    print(f"   Response: {result}")
+            # Extract call_id from response
+            call_id = str(response) if response else "unknown"
 
-                    return {
-                        "call_id": call_id,
-                        "call_sid": call_id,  # For backward compatibility with main.py
-                        "status": "initiated",
-                        "message": f"Call initiated successfully. You will receive the call in ~10 seconds."
-                    }
-                else:
-                    error_msg = f"API returned {response.status_code}: {response.text}"
-                    print(f"❌ Error initiating call: {error_msg}")
-                    return {
-                        "status": "error",
-                        "error": error_msg,
-                        "message": f"Failed to initiate call: {error_msg}"
-                    }
+            return {
+                "call_id": call_id,
+                "call_sid": call_id,  # For backward compatibility with main.py
+                "status": "initiated",
+                "message": f"Appel lancé avec succès ! Vous allez recevoir l'appel dans ~10 secondes."
+            }
 
         except Exception as e:
             print(f"❌ ElevenLabs call failed: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 "status": "error",
                 "error": str(e),
-                "message": f"Failed to initiate call: {str(e)}"
+                "message": f"Échec de l'appel: {str(e)}"
             }
 
     def generate_twiml(self, agent_id: str) -> str:
