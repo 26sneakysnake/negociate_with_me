@@ -24,6 +24,8 @@ import os
 from audio.elevenlabs_client import ElevenLabsVoiceAgent
 from ai.realtime_analyzer import RealtimeAnalyzer
 from websocket_handler import handle_simulation_websocket
+from services.web_research_service import WebResearchService
+from services.elevenlabs_agent_service import ElevenLabsConversationalAgent
 
 # Initialize FastAPI
 app = FastAPI(title="NegotiAI v0")
@@ -52,10 +54,12 @@ elevenlabs = None
 # New services for real-time simulation
 elevenlabs_voice_agent = None
 realtime_analyzer = None
+web_research_service = None
+elevenlabs_conversational_agent = None
 
 def init_services():
     """Initialize services with error handling"""
-    global mistral, qdrant, elevenlabs, elevenlabs_voice_agent, realtime_analyzer
+    global mistral, qdrant, elevenlabs, elevenlabs_voice_agent, realtime_analyzer, web_research_service, elevenlabs_conversational_agent
     try:
         mistral = MistralService()
         print("✅ Mistral service initialized")
@@ -96,6 +100,26 @@ def init_services():
             print("⚠️ Realtime Analyzer: No Mistral API key provided")
     except Exception as e:
         print(f"⚠️ Realtime Analyzer failed to initialize: {e}")
+
+    # Initialize web research service
+    try:
+        if mistral:
+            web_research_service = WebResearchService(mistral)
+            print("✅ Web Research Service initialized")
+        else:
+            print("⚠️ Web Research Service: Mistral not available")
+    except Exception as e:
+        print(f"⚠️ Web Research Service failed to initialize: {e}")
+
+    # Initialize ElevenLabs Conversational AI service
+    try:
+        if settings.ELEVENLABS_API_KEY:
+            elevenlabs_conversational_agent = ElevenLabsConversationalAgent(api_key=settings.ELEVENLABS_API_KEY)
+            print("✅ ElevenLabs Conversational AI initialized")
+        else:
+            print("⚠️ ElevenLabs Conversational AI: No API key provided")
+    except Exception as e:
+        print(f"⚠️ ElevenLabs Conversational AI failed to initialize: {e}")
 
 # In-memory session storage (use Redis in production)
 sessions: Dict[str, Session] = {}
@@ -348,10 +372,72 @@ async def get_session(session_id: str):
 # REAL-TIME VOICE SIMULATION ENDPOINTS (NEW)
 # ============================================================================
 
+@app.post("/api/simulation/research")
+async def research_negotiation(request: dict):
+    """
+    Research product and client before simulation using Mistral AI
+
+    Args:
+        request: {
+            "product_name": str,
+            "company_name": str (optional),
+            "industry": str (optional)
+        }
+
+    Returns:
+        {
+            "product": {
+                "name": str,
+                "features": List[str],
+                "typical_pricing": str,
+                "competitors": List[str],
+                "market_position": str,
+                "key_benefits": List[str]
+            },
+            "client": {
+                "name": str,
+                "company_size": str,
+                "industry": str,
+                "pain_points": List[str],
+                "budget_range": str,
+                "decision_factors": List[str]
+            } (optional)
+        }
+    """
+
+    if not web_research_service:
+        raise HTTPException(
+            status_code=503,
+            detail="Web Research Service not available. Check Mistral API key configuration."
+        )
+
+    try:
+        product_name = request.get("product_name")
+        company_name = request.get("company_name")
+        industry = request.get("industry")
+
+        if not product_name:
+            raise HTTPException(status_code=400, detail="product_name is required")
+
+        # Perform research
+        enriched_context = await web_research_service.prepare_negotiation_context(
+            product_name=product_name,
+            company_name=company_name,
+            industry=industry
+        )
+
+        return enriched_context
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during research: {str(e)}")
+
+
 @app.post("/api/simulation/setup")
 async def setup_simulation(context: dict):
     """
-    Setup voice simulation session
+    Setup voice simulation session with ElevenLabs Conversational AI
 
     Args:
         context: {
@@ -360,31 +446,40 @@ async def setup_simulation(context: dict):
             "minimum_price": str,
             "value_props": List[str],
             "opponent_goal": str,
-            "opponent_script": List[str] (optional)
+            "research_data": dict (optional - from /api/simulation/research)
         }
 
     Returns:
         {
             "status": "ready",
             "agent_id": str,
+            "conversation_id": str,
+            "websocket_url": str,
             "message": str
         }
     """
 
-    if not elevenlabs_voice_agent:
+    if not elevenlabs_conversational_agent:
         raise HTTPException(
             status_code=503,
-            detail="ElevenLabs Voice Agent not available. Check API key configuration."
+            detail="ElevenLabs Conversational AI not available. Check API key configuration."
         )
 
     try:
-        # Create opponent agent configuration
-        agent_config = await elevenlabs_voice_agent.create_opponent_agent(context)
+        research_data = context.get("research_data")
+
+        # Create negotiation agent using ElevenLabs Conversational AI
+        agent_config = await elevenlabs_conversational_agent.create_negotiation_agent(
+            context=context,
+            research_data=research_data
+        )
 
         return {
             "status": "ready",
             "agent_id": agent_config["agent_id"],
-            "message": "Simulation ready to start"
+            "conversation_id": agent_config["conversation_id"],
+            "websocket_url": agent_config["websocket_url"],
+            "message": "ElevenLabs Conversational AI agent ready for voice simulation"
         }
 
     except Exception as e:

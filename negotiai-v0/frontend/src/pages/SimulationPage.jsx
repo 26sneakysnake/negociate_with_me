@@ -2,8 +2,16 @@ import React, { useState } from 'react';
 import VoiceSimulator from '../components/VoiceSimulator';
 
 export default function SimulationPage({ onBack }) {
-  const [simulationStarted, setSimulationStarted] = useState(false);
+  const [currentStep, setCurrentStep] = useState('setup'); // setup, research, simulation
   const [scenarioType, setScenarioType] = useState('saas');
+
+  // Research fields
+  const [productName, setProductName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [researchData, setResearchData] = useState(null);
+  const [isResearching, setIsResearching] = useState(false);
+  const [researchError, setResearchError] = useState(null);
 
   // Demo scenarios
   const scenarios = {
@@ -69,8 +77,212 @@ export default function SimulationPage({ onBack }) {
 
   const currentScenario = scenarios[scenarioType];
 
-  if (simulationStarted) {
-    return <VoiceSimulator context={currentScenario} />;
+  // Handle research
+  const handleResearch = async () => {
+    if (!productName.trim()) {
+      setResearchError('Le nom du produit est requis');
+      return;
+    }
+
+    setIsResearching(true);
+    setResearchError(null);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/simulation/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_name: productName,
+          company_name: companyName || null,
+          industry: industry || null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Research failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setResearchData(data);
+      setCurrentStep('research');
+    } catch (error) {
+      console.error('Research error:', error);
+      setResearchError(error.message || 'Erreur lors de la recherche');
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
+  // Handle start simulation with research data
+  const handleStartSimulation = () => {
+    setCurrentStep('simulation');
+  };
+
+  if (currentStep === 'simulation') {
+    // Pass research data to simulator
+    const enrichedContext = {
+      ...currentScenario,
+      research_data: researchData,
+      product: productName || currentScenario.product
+    };
+    return <VoiceSimulator context={enrichedContext} />;
+  }
+
+  if (currentStep === 'research') {
+    // Display research results
+    return (
+      <div style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        padding: '40px 20px'
+      }}>
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+          color: 'white',
+          padding: '32px',
+          borderRadius: '12px',
+          marginBottom: '32px',
+          textAlign: 'center'
+        }}>
+          <h1 style={{ margin: '0 0 12px 0', fontSize: '36px' }}>
+            ✅ Recherche Terminée
+          </h1>
+          <p style={{ margin: '0', fontSize: '16px', opacity: 0.9 }}>
+            Voici les informations collectées par Mistral AI
+          </p>
+        </div>
+
+        {/* Research Results */}
+        <div style={{
+          background: 'white',
+          border: '1px solid #ddd',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '24px'
+        }}>
+          <h2 style={{ marginTop: 0 }}>📦 Produit: {researchData.product.name}</h2>
+
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>💎 Caractéristiques clés</h3>
+            <ul style={{ margin: 0 }}>
+              {researchData.product.features.map((feature, i) => (
+                <li key={i}>{feature}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>💰 Prix marché typique</h3>
+            <p style={{ margin: 0, color: '#666' }}>{researchData.product.typical_pricing}</p>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>🏆 Concurrents principaux</h3>
+            <p style={{ margin: 0, color: '#666' }}>{researchData.product.competitors.join(', ')}</p>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>📊 Position marché</h3>
+            <p style={{ margin: 0, color: '#666' }}>{researchData.product.market_position}</p>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>⭐ Bénéfices principaux</h3>
+            <ul style={{ margin: 0 }}>
+              {researchData.product.key_benefits.map((benefit, i) => (
+                <li key={i}>{benefit}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Client Info if available */}
+        {researchData.client && (
+          <div style={{
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '24px'
+          }}>
+            <h2 style={{ marginTop: 0 }}>🏢 Client: {researchData.client.name}</h2>
+
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Taille:</strong> {researchData.client.company_size}
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Secteur:</strong> {researchData.client.industry}
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Budget estimé:</strong> {researchData.client.budget_range}
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Points de douleur:</strong>
+              <ul style={{ marginTop: '8px', marginBottom: 0 }}>
+                {researchData.client.pain_points.map((point, i) => (
+                  <li key={i}>{point}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <strong>Facteurs de décision:</strong>
+              <ul style={{ marginTop: '8px', marginBottom: 0 }}>
+                {researchData.client.decision_factors.map((factor, i) => (
+                  <li key={i}>{factor}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Start Simulation Button */}
+        <div style={{ textAlign: 'center' }}>
+          <button
+            onClick={handleStartSimulation}
+            style={{
+              padding: '20px 60px',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: 'white',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              transition: 'transform 0.2s',
+              marginRight: '12px'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            🎤 Démarrer la Simulation Vocale
+          </button>
+
+          <button
+            onClick={() => {
+              setCurrentStep('setup');
+              setResearchData(null);
+            }}
+            style={{
+              background: 'none',
+              border: '1px solid #667eea',
+              color: '#667eea',
+              padding: '20px 40px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+          >
+            ← Refaire la recherche
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -96,7 +308,7 @@ export default function SimulationPage({ onBack }) {
         </p>
       </div>
 
-      {/* Scenario Selection */}
+      {/* Research Form */}
       <div style={{
         background: 'white',
         border: '1px solid #ddd',
@@ -104,7 +316,125 @@ export default function SimulationPage({ onBack }) {
         padding: '24px',
         marginBottom: '24px'
       }}>
-        <h2 style={{ marginTop: 0 }}>📋 Choisissez votre scénario</h2>
+        <h2 style={{ marginTop: 0 }}>🔍 Recherche Pré-Négociation (Mistral AI)</h2>
+        <p style={{ color: '#666', marginBottom: '20px' }}>
+          Mistral AI va rechercher des informations sur votre produit et votre client pour enrichir la simulation.
+        </p>
+
+        <div style={{ display: 'grid', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Nom du produit/solution <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              placeholder="Ex: Plateforme SaaS Analytics, Développement web React..."
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '14px'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Nom de l'entreprise cliente (optionnel)
+            </label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Ex: Acme Corp, TechStartup Inc..."
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '14px'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Secteur d'activité (optionnel)
+            </label>
+            <input
+              type="text"
+              value={industry}
+              onChange={(e) => setIndustry(e.target.value)}
+              placeholder="Ex: E-commerce, Finance, Santé..."
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '14px'
+              }}
+            />
+          </div>
+        </div>
+
+        {researchError && (
+          <div style={{
+            background: '#fee',
+            border: '1px solid #f88',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '16px',
+            color: '#c00'
+          }}>
+            ❌ {researchError}
+          </div>
+        )}
+
+        <button
+          onClick={handleResearch}
+          disabled={isResearching || !productName.trim()}
+          style={{
+            padding: '16px 32px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: 'white',
+            background: isResearching || !productName.trim()
+              ? '#ccc'
+              : 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: isResearching || !productName.trim() ? 'not-allowed' : 'pointer',
+            width: '100%'
+          }}
+        >
+          {isResearching ? '🔍 Recherche en cours...' : '🚀 Lancer la recherche'}
+        </button>
+
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          background: '#e3f2fd',
+          border: '1px solid #2196f3',
+          borderRadius: '8px',
+          fontSize: '14px'
+        }}>
+          💡 <strong>Astuce:</strong> Plus vous donnez d'informations (entreprise, secteur),
+          plus l'agent IA sera réaliste et adapté à votre contexte.
+        </div>
+      </div>
+
+      {/* Quick Demo (Option to skip research) */}
+      <div style={{
+        background: 'white',
+        border: '1px solid #ddd',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '24px'
+      }}>
+        <h2 style={{ marginTop: 0 }}>⚡ OU: Scénarios Demo Rapide (sans recherche)</h2>
 
         <div style={{
           display: 'grid',
@@ -312,16 +642,16 @@ export default function SimulationPage({ onBack }) {
         </div>
       </div>
 
-      {/* Start Button */}
+      {/* Start Button - Demo without research */}
       <div style={{ textAlign: 'center' }}>
         <button
-          onClick={() => setSimulationStarted(true)}
+          onClick={() => setCurrentStep('simulation')}
           style={{
             padding: '20px 60px',
             fontSize: '20px',
             fontWeight: 'bold',
             color: 'white',
-            background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+            background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
             border: 'none',
             borderRadius: '12px',
             cursor: 'pointer',
@@ -331,7 +661,7 @@ export default function SimulationPage({ onBack }) {
           onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          ▶️ Démarrer la Simulation
+          ▶️ Démarrer Sans Recherche (Demo)
         </button>
 
         <div style={{ marginTop: '20px' }}>
