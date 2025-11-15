@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import VoiceSimulator from '../components/VoiceSimulator';
+import ElevenLabsVoiceChat from '../components/ElevenLabsVoiceChat';
 
 export default function SimulationPage({ onBack }) {
   const [currentStep, setCurrentStep] = useState('setup'); // setup, research, simulation
   const [scenarioType, setScenarioType] = useState('saas');
+  const [simulationMode, setSimulationMode] = useState('voice'); // 'voice' or 'text'
 
   // Research fields
   const [productName, setProductName] = useState('');
@@ -125,7 +127,13 @@ export default function SimulationPage({ onBack }) {
       research_data: researchData,
       product: productName || currentScenario.product
     };
-    return <VoiceSimulator context={enrichedContext} />;
+
+    // Use ElevenLabs voice chat for voice mode, text simulator for text mode
+    if (simulationMode === 'voice') {
+      return <ElevenLabsVoiceChat context={enrichedContext} onClose={() => setCurrentStep('setup')} />;
+    } else {
+      return <VoiceSimulator context={enrichedContext} />;
+    }
   }
 
   if (currentStep === 'research') {
@@ -240,7 +248,56 @@ export default function SimulationPage({ onBack }) {
           </div>
         )}
 
-        {/* Start Simulation Button */}
+        {/* Simulation Mode Selection */}
+        <div style={{
+          background: 'white',
+          border: '1px solid #ddd',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '24px'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '16px' }}>🎯 Choisissez le mode de simulation</h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <button
+              onClick={() => setSimulationMode('voice')}
+              style={{
+                padding: '20px',
+                border: simulationMode === 'voice' ? '3px solid #667eea' : '2px solid #ddd',
+                borderRadius: '12px',
+                background: simulationMode === 'voice' ? '#f0f4ff' : 'white',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎤</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Voice-to-Voice</div>
+              <div style={{ fontSize: '13px', color: '#666' }}>
+                Conversation vocale en temps réel avec ElevenLabs AI
+              </div>
+            </button>
+
+            <button
+              onClick={() => setSimulationMode('text')}
+              style={{
+                padding: '20px',
+                border: simulationMode === 'text' ? '3px solid #667eea' : '2px solid #ddd',
+                borderRadius: '12px',
+                background: simulationMode === 'text' ? '#f0f4ff' : 'white',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>⌨️</div>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Texte (Demo)</div>
+              <div style={{ fontSize: '13px', color: '#666' }}>
+                Simulation textuelle avec suggestions tactiques
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Start Simulation Buttons */}
         <div style={{ textAlign: 'center' }}>
           <button
             onClick={handleStartSimulation}
@@ -260,7 +317,7 @@ export default function SimulationPage({ onBack }) {
             onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
-            🎤 Démarrer la Simulation Vocale
+            {simulationMode === 'voice' ? '🎤 Démarrer la Conversation Vocale' : '⌨️ Démarrer en Mode Texte'}
           </button>
 
           <button
