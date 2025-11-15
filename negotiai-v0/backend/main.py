@@ -149,15 +149,12 @@ def init_services():
         if settings.ELEVENLABS_API_KEY:
             phone_call_handler = PhoneCallHandler(
                 elevenlabs_api_key=settings.ELEVENLABS_API_KEY,
-                twilio_account_sid=settings.TWILIO_ACCOUNT_SID if settings.TWILIO_ACCOUNT_SID else None,
-                twilio_auth_token=settings.TWILIO_AUTH_TOKEN if settings.TWILIO_AUTH_TOKEN else None,
-                twilio_phone_number=settings.TWILIO_PHONE_NUMBER if settings.TWILIO_PHONE_NUMBER else None,
-                public_url=settings.PUBLIC_URL
+                agent_phone_number_id=settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID if settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID else None
             )
-            if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
-                print("✅ Phone Call Handler initialized (with Twilio)")
+            if settings.ELEVENLABS_AGENT_PHONE_NUMBER_ID:
+                print("✅ Phone Call Handler initialized (with phone number)")
             else:
-                print("✅ Phone Call Handler initialized (without Twilio - phone calls disabled)")
+                print("✅ Phone Call Handler initialized (phone calls may not work - missing agent_phone_number_id)")
         else:
             print("⚠️ Phone Call Handler: No ElevenLabs API key provided")
     except Exception as e:
@@ -598,24 +595,24 @@ async def simulation_websocket(websocket: WebSocket):
 # ============================================================================
 
 @app.post("/api/call/test")
-async def test_twilio_call(data: dict):
+async def test_elevenlabs_call(data: dict):
     """
-    TEST ENDPOINT - Send a simple test call to verify Twilio configuration
+    TEST ENDPOINT - Send a simple test call to verify ElevenLabs configuration
 
     Request:
     {
         "phone_number": "+33612345678"
     }
 
-    This will send a simple "Hello, this is a test" message via Twilio
+    This will send a simple test call using ElevenLabs Conversational AI
     """
     if not phone_call_handler:
         raise HTTPException(status_code=503, detail="Phone Call Handler not available")
 
-    if not phone_call_handler.twilio_client:
+    if not phone_call_handler.agent_phone_number_id:
         raise HTTPException(
             status_code=503,
-            detail="Twilio not configured. Please check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER in .env"
+            detail="ElevenLabs agent_phone_number_id not configured. Please check ELEVENLABS_AGENT_PHONE_NUMBER_ID in .env"
         )
 
     try:
@@ -624,33 +621,56 @@ async def test_twilio_call(data: dict):
             raise HTTPException(status_code=400, detail="phone_number is required")
 
         print(f"\n{'='*70}")
-        print(f"📞 TEST CALL")
+        print(f"📞 TEST CALL VIA ELEVENLABS")
         print(f"{'='*70}")
         print(f"   To: {phone_number}")
-        print(f"   From: {phone_call_handler.twilio_phone_number}")
-        print(f"   URL: {phone_call_handler.public_url}/api/call/twiml/test_agent")
+        print(f"   Agent Phone Number ID: {phone_call_handler.agent_phone_number_id}")
         print(f"{'='*70}\n")
 
-        # Create test call
-        call = phone_call_handler.twilio_client.calls.create(
-            to=phone_number,
-            from_=phone_call_handler.twilio_phone_number,
-            url=f"{phone_call_handler.public_url}/api/call/twiml/test_agent",
-            status_callback=f"{phone_call_handler.public_url}/api/call/status",
-            status_callback_event=['initiated', 'ringing', 'answered', 'completed']
+        # Create test agent with simple prompt
+        test_prompt = """Vous êtes un assistant vocal de test pour NegotiAI.
+
+Dites simplement : "Bonjour ! Ceci est un test de l'application NegotiAI. Si vous recevez cet appel, cela signifie que la configuration fonctionne correctement. Merci et à bientôt !"
+
+Puis raccrochez poliment."""
+
+        print("📝 Creating test agent...")
+        agent = phone_call_handler.client.conversational_ai.create_agent(
+            conversation_config={
+                "agent": {
+                    "prompt": {
+                        "prompt": test_prompt
+                    },
+                    "first_message": "Bonjour ! Ceci est un test de NegotiAI.",
+                    "language": "fr"
+                },
+                "tts": {
+                    "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+                    "model_id": "eleven_turbo_v2_5"
+                }
+            }
         )
 
-        print(f"✅ Test call initiated!")
-        print(f"   Call SID: {call.sid}")
-        print(f"   Status: {call.status}\n")
+        print(f"✅ Test agent created: {agent.agent_id}")
+
+        # Initiate call using ElevenLabs
+        print(f"📞 Initiating call...")
+        result = await phone_call_handler.initiate_call(
+            phone_number=phone_number,
+            agent_id=agent.agent_id
+        )
+
+        if result.get("status") == "error":
+            raise HTTPException(status_code=500, detail=result.get("message"))
+
+        print(f"✅ Test call initiated!\n")
 
         return {
             "status": "success",
-            "message": "Test call initiated. You should receive a call saying 'Bonjour! Ceci est un test...'",
-            "call_sid": call.sid,
-            "call_status": call.status,
-            "to": phone_number,
-            "from": phone_call_handler.twilio_phone_number
+            "message": result.get("message", "Test call initiated successfully"),
+            "agent_id": agent.agent_id,
+            "call_id": result.get("call_id"),
+            "to": phone_number
         }
 
     except Exception as e:

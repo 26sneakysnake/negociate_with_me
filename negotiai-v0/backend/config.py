@@ -10,13 +10,8 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str
     ELEVENLABS_API_KEY: str
 
-    # Twilio Config (for phone calls)
-    TWILIO_ACCOUNT_SID: str = ""
-    TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_PHONE_NUMBER: str = ""
-
-    # Public URL for webhooks
-    PUBLIC_URL: str = "http://localhost:8000"
+    # ElevenLabs Phone Number ID (get from ElevenLabs dashboard)
+    ELEVENLABS_AGENT_PHONE_NUMBER_ID: str = ""
 
     # App Config
     APP_NAME: str = "NegotiAI v0"

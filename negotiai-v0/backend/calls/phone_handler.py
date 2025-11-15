@@ -1,11 +1,9 @@
 """
-ElevenLabs + Twilio Phone Call Handler
-Manages real phone calls with AI negotiation opponent using Twilio + ElevenLabs
+ElevenLabs Conversational AI Phone Call Handler
+Uses ElevenLabs built-in Twilio integration for phone calls
 """
 
-from twilio.rest import Client
-from twilio.twiml.voice_response import VoiceResponse, Connect, Stream
-import httpx
+from elevenlabs import ElevenLabs
 import json
 from typing import Dict
 from services.mistral_service import MistralService
@@ -131,27 +129,19 @@ PROGRESSION:
 
 
 class PhoneCallHandler:
-    """Handles phone-based negotiation training with Twilio + ElevenLabs"""
+    """Handles phone-based negotiation training with ElevenLabs Conversational AI"""
 
     def __init__(
         self,
         elevenlabs_api_key: str,
-        twilio_account_sid: str = None,
-        twilio_auth_token: str = None,
-        twilio_phone_number: str = None,
-        public_url: str = None
+        agent_phone_number_id: str = None
     ):
-        self.elevenlabs_api_key = elevenlabs_api_key
-        self.elevenlabs_base_url = "https://api.elevenlabs.io/v1"
+        self.client = ElevenLabs(api_key=elevenlabs_api_key)
+        self.agent_phone_number_id = agent_phone_number_id
 
-        # Twilio client (optional - None if not configured)
-        if twilio_account_sid and twilio_auth_token:
-            self.twilio_client = Client(twilio_account_sid, twilio_auth_token)
-            self.twilio_phone_number = twilio_phone_number
-            self.public_url = public_url or "http://localhost:8000"
-        else:
-            self.twilio_client = None
-            print("⚠️ Twilio not configured - phone calls will not work")
+        if not agent_phone_number_id:
+            print("⚠️ agent_phone_number_id not configured - phone calls may not work")
+            print("   Get this from ElevenLabs dashboard → Conversational AI → Phone Numbers")
 
     async def create_agent(
         self,
@@ -216,63 +206,38 @@ PREMIER MESSAGE À DIRE:
 
         # Create ElevenLabs Conversational AI agent
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.elevenlabs_base_url}/convai/agents/create",
-                    headers={
-                        "xi-api-key": self.elevenlabs_api_key,
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "conversation_config": {
-                            "agent": {
-                                "prompt": {
-                                    "prompt": full_prompt
-                                },
-                                "first_message": scenario['first_message'],
-                                "language": "fr"
-                            },
-                            "tts": {
-                                "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
-                                "model_id": "eleven_turbo_v2_5",
-                                "optimize_streaming_latency": 3
-                            }
-                        }
-                    },
-                    timeout=30.0
-                )
-
-                if response.status_code in [200, 201]:
-                    agent_data = response.json()
-                    agent_id = agent_data.get("agent_id")
-
-                    print(f"✅ ElevenLabs agent created: {agent_id}")
-
-                    return {
-                        "agent_id": agent_id,
-                        "scenario_type": scenario_type,
-                        "scenario_name": scenario['name'],
-                        "prompt": full_prompt,
+            agent = self.client.conversational_ai.create_agent(
+                conversation_config={
+                    "agent": {
+                        "prompt": {
+                            "prompt": full_prompt
+                        },
                         "first_message": scenario['first_message'],
-                        "user_context": user_context
+                        "language": "fr"
+                    },
+                    "tts": {
+                        "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel voice
+                        "model_id": "eleven_turbo_v2_5"
                     }
-                else:
-                    print(f"❌ Failed to create agent: {response.status_code}")
-                    print(f"   Response: {response.text}")
-                    raise Exception(f"ElevenLabs agent creation failed: {response.status_code} - {response.text}")
+                }
+            )
 
-        except Exception as e:
-            print(f"❌ Error creating ElevenLabs agent: {e}")
-            # Return config anyway for fallback
+            agent_id = agent.agent_id
+
+            print(f"✅ ElevenLabs agent created: {agent_id}")
+
             return {
-                "agent_id": None,
+                "agent_id": agent_id,
                 "scenario_type": scenario_type,
                 "scenario_name": scenario['name'],
                 "prompt": full_prompt,
                 "first_message": scenario['first_message'],
-                "user_context": user_context,
-                "error": str(e)
+                "user_context": user_context
             }
+
+        except Exception as e:
+            print(f"❌ Error creating ElevenLabs agent: {e}")
+            raise Exception(f"Failed to create agent: {str(e)}")
 
     async def initiate_call(
         self,
@@ -280,54 +245,51 @@ PREMIER MESSAGE À DIRE:
         agent_id: str
     ) -> Dict:
         """
-        Initiate phone call using Twilio + ElevenLabs
+        Initiate phone call using ElevenLabs Conversational AI + Twilio integration
 
         Args:
-            phone_number: User's phone number (international format)
+            phone_number: User's phone number (international format: +33695990832)
             agent_id: ElevenLabs agent ID
 
         Returns:
             {
-                "call_sid": str,
+                "call_id": str,
                 "status": "initiated",
                 "message": str
             }
         """
 
-        if not self.twilio_client:
+        if not self.agent_phone_number_id:
             return {
-                "status": "unavailable",
-                "error": "Twilio not configured",
-                "message": "Twilio credentials are not set in environment variables"
+                "status": "error",
+                "error": "agent_phone_number_id not configured",
+                "message": "ElevenLabs phone number ID is missing. Please configure ELEVENLABS_AGENT_PHONE_NUMBER_ID in .env"
             }
 
-        print(f"📞 Initiating call to: {phone_number}")
-        print(f"   Using agent: {agent_id}")
-        print(f"   From number: {self.twilio_phone_number}")
+        print(f"📞 Initiating call via ElevenLabs Conversational AI")
+        print(f"   To: {phone_number}")
+        print(f"   Agent ID: {agent_id}")
+        print(f"   Phone Number ID: {self.agent_phone_number_id}")
 
         try:
-            # Create Twilio call
-            # When answered, Twilio will request TwiML from the webhook URL
-            call = self.twilio_client.calls.create(
-                to=phone_number,
-                from_=self.twilio_phone_number,
-                url=f"{self.public_url}/api/call/twiml/{agent_id}",
-                status_callback=f"{self.public_url}/api/call/status",
-                status_callback_event=['initiated', 'ringing', 'answered', 'completed'],
-                status_callback_method='POST'
+            # Use ElevenLabs Conversational AI Twilio integration
+            response = self.client.conversational_ai.twilio.outbound_call(
+                agent_id=agent_id,
+                agent_phone_number_id=self.agent_phone_number_id,
+                to_number=phone_number
             )
 
-            print(f"✅ Call initiated: {call.sid}")
-            print(f"   Status: {call.status}")
+            print(f"✅ Call initiated via ElevenLabs")
+            print(f"   Response: {response}")
 
             return {
-                "call_sid": call.sid,
+                "call_id": str(response) if response else "unknown",
                 "status": "initiated",
                 "message": f"Call initiated successfully. You will receive the call in ~10 seconds."
             }
 
         except Exception as e:
-            print(f"❌ Twilio call failed: {e}")
+            print(f"❌ ElevenLabs call failed: {e}")
             return {
                 "status": "error",
                 "error": str(e),
@@ -336,30 +298,13 @@ PREMIER MESSAGE À DIRE:
 
     def generate_twiml(self, agent_id: str) -> str:
         """
-        Generate TwiML to connect call to ElevenLabs WebSocket
-
-        Args:
-            agent_id: ElevenLabs agent ID
-
-        Returns:
-            TwiML XML string
+        No longer needed - ElevenLabs handles TwiML automatically
+        Kept for backward compatibility
         """
-
-        response = VoiceResponse()
-
-        # Connect to ElevenLabs WebSocket
-        connect = Connect()
-        stream = Stream(
-            url=f"wss://api.elevenlabs.io/v1/convai/conversation?agent_id={agent_id}"
-        )
-
-        # Add authentication header for ElevenLabs
-        stream.parameter(name="xi-api-key", value=self.elevenlabs_api_key)
-
-        connect.append(stream)
-        response.append(connect)
-
-        return str(response)
+        return """<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say>ElevenLabs handles this automatically</Say>
+</Response>"""
 
     async def analyze_call(
         self,
