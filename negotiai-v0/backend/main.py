@@ -597,6 +597,69 @@ async def simulation_websocket(websocket: WebSocket):
 # PHONE CALL ENDPOINTS (NEW - Real phone calls with ElevenLabs)
 # ============================================================================
 
+@app.post("/api/call/test")
+async def test_twilio_call(data: dict):
+    """
+    TEST ENDPOINT - Send a simple test call to verify Twilio configuration
+
+    Request:
+    {
+        "phone_number": "+33612345678"
+    }
+
+    This will send a simple "Hello, this is a test" message via Twilio
+    """
+    if not phone_call_handler:
+        raise HTTPException(status_code=503, detail="Phone Call Handler not available")
+
+    if not phone_call_handler.twilio_client:
+        raise HTTPException(
+            status_code=503,
+            detail="Twilio not configured. Please check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER in .env"
+        )
+
+    try:
+        phone_number = data.get("phone_number")
+        if not phone_number:
+            raise HTTPException(status_code=400, detail="phone_number is required")
+
+        print(f"\n{'='*70}")
+        print(f"📞 TEST CALL")
+        print(f"{'='*70}")
+        print(f"   To: {phone_number}")
+        print(f"   From: {phone_call_handler.twilio_phone_number}")
+        print(f"   URL: {phone_call_handler.public_url}/api/call/twiml/test_agent")
+        print(f"{'='*70}\n")
+
+        # Create test call
+        call = phone_call_handler.twilio_client.calls.create(
+            to=phone_number,
+            from_=phone_call_handler.twilio_phone_number,
+            url=f"{phone_call_handler.public_url}/api/call/twiml/test_agent",
+            status_callback=f"{phone_call_handler.public_url}/api/call/status",
+            status_callback_event=['initiated', 'ringing', 'answered', 'completed']
+        )
+
+        print(f"✅ Test call initiated!")
+        print(f"   Call SID: {call.sid}")
+        print(f"   Status: {call.status}\n")
+
+        return {
+            "status": "success",
+            "message": "Test call initiated. You should receive a call saying 'Bonjour! Ceci est un test...'",
+            "call_sid": call.sid,
+            "call_status": call.status,
+            "to": phone_number,
+            "from": phone_call_handler.twilio_phone_number
+        }
+
+    except Exception as e:
+        print(f"❌ Test call failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Test call error: {str(e)}")
+
+
 @app.get("/api/call/scenarios")
 async def get_scenarios():
     """
@@ -783,13 +846,21 @@ async def get_twiml(agent_id: str):
     Twilio calls this when user answers the phone.
     Returns XML instructions to stream audio to/from ElevenLabs.
     """
+    from fastapi.responses import Response
+
+    # For test_agent, return simple test message
+    if agent_id == "test_agent":
+        twiml = """<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say language="fr-FR">Bonjour! Ceci est un test de Twilio. Si vous entendez ce message, votre configuration fonctionne parfaitement. Au revoir!</Say>
+</Response>"""
+        print(f"📞 Serving test TwiML")
+        return Response(content=twiml, media_type="application/xml")
 
     if not phone_call_handler:
         raise HTTPException(status_code=503, detail="Phone Call Handler not available")
 
     try:
-        from fastapi.responses import Response
-
         # Generate TwiML
         twiml = phone_call_handler.generate_twiml(agent_id)
 
